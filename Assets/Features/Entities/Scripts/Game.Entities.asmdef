@@ -1,0 +1,22 @@
+{
+    "name": "Game.Entities",
+    "rootNamespace": "Game.Entities",
+    "references": [
+        "GUID:4307f53044263cf4b835bd812fc161a4",
+        "GUID:6d8d31c569ff49f792685c49d5709837",
+        "GUID:894935dc78c247aba5acdc0e86f7619b",
+        "GUID:0555d359d9c2448e8fcd38237492f38e",
+        "GUID:ffd2de7a87184ff194ec0653381bfb01",
+        "GUID:9fe47eb90caf43fbbeeb158f5c582ccd",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

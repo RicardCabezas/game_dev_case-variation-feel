@@ -1,0 +1,18 @@
+{
+    "name": "Game.Biomes",
+    "rootNamespace": "Game.Biomes",
+    "references": [
+        "GUID:6d8d31c569ff49f792685c49d5709837",
+        "GUID:894935dc78c247aba5acdc0e86f7619b",
+        "GUID:9fe47eb90caf43fbbeeb158f5c582ccd"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

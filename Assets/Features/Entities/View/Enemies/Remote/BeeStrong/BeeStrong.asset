@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 528cc625937f943eba71f173a0f2988f, type: 3}
+  m_Name: BeeStrong
+  m_EditorClassIdentifier: 
+  id: bee_strong
+  initialHealth: 100
+  speed: 7
+  attackCooldown: 4
+  attackDamage: 20
+  attackRange: 2.5
+  prefab: {fileID: 3790887112881915835, guid: ca1a34fa598404dffb62f942ff786abb, type: 3}
