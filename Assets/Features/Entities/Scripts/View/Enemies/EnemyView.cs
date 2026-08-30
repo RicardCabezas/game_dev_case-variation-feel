@@ -7,7 +7,7 @@ namespace Game.GamePlay.Enemies
 {
 	public class EnemyView : MonoBehaviour
 	{
-		private static readonly int IsMovingHash = Animator.StringToHash("IsMoving");
+		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
 
 		[SerializeField] private Animator animator;
 		[SerializeField] private float rotationSpeed = 10f;
