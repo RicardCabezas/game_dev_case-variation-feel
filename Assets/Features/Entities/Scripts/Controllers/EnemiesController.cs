@@ -243,7 +243,7 @@ namespace Game.GamePlay.Enemies
 			if (distanceSqr >= spacingSqr) return;
 
 			float distance = Mathf.Sqrt(distanceSqr);
-			Vector3 direction = distance > 0f ? difference / distance : GetOverlapDirection(firstEnemy.Id, secondEnemy.Id);
+			Vector3 direction = distance > 0f ? difference / distance : Vector3.right;
 			Vector3 correction = direction * ((spacing - distance) * 0.5f);
 
 			_updatedEnemiesBuffer[firstIndex] = new EnemyState(firstEnemy.Id, firstEnemy.Position + correction, firstEnemy.Health, firstEnemy.Config, firstEnemy.LastAttackTime);
@@ -266,10 +266,5 @@ namespace Game.GamePlay.Enemies
 			return x * x + z * z;
 		}
 
-		private static Vector3 GetOverlapDirection(int firstId, int secondId)
-		{
-			float angle = (firstId * 0.61803398875f + secondId * 0.38196601125f) * Mathf.PI * 2f;
-			return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-		}
 	}
 }
