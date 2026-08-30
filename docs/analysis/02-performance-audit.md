@@ -13,6 +13,8 @@ Raw Unity `.data` / `.pdata` captures were not used for timing claims because th
 
 Default gameplay configuration caps enemies at 20. Android project code does not set `Application.targetFrameRate`; the observed initial 30 FPS cadence was Unity mobile's default target, not a measured rendering limit. Tests below use an explicit 90 FPS target.
 
+Candidate-provided target-device Memory module captures show one spawn frame (9.7 KB GC) and one death frame (19.3 KB GC). By the death capture, multiple bees had already completed their lifecycle. Resident/allocated summary and displayed asset-category totals remain unchanged, supporting no accumulated retained-enemy memory or leak under repeated normal churn. This does not measure the single-frame cost of many simultaneous deaths.
+
 ## Tested cases
 
 | Case | Runtime result | Conclusion |
@@ -189,5 +191,6 @@ Medium — removal during enumeration must remain safe.
 - `Resources.Load<T>` singleton loading is cached/startup-only.
 - Service discovery and dependency ordering are startup work.
 - Weapon instantiate/destroy is startup/switch-only, not recurring combat churn.
+- Individual spawn/death frames allocate 9.7 KB / 19.3 KB GC. After multiple completed bee lifecycles, no retained-memory growth is shown. Pooling is not justified at the current cap without a measured lifecycle hitch, particularly from simultaneous deaths.
 - No evidence supports broad `foreach`/LINQ/GetComponent/pooling/DOTS rewrites.
 - No physics query, particle, or audio bottleneck is measured.
