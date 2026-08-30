@@ -59,7 +59,6 @@ namespace Game.GamePlay.Enemies
 			if (meshRenderer == null) return;
 
 			_materialPropertyBlock ??= new MaterialPropertyBlock();
-			meshRenderer.GetPropertyBlock(_materialPropertyBlock);
 			_materialPropertyBlock.SetColor(BaseColorHash, hitFlashColor);
 			meshRenderer.SetPropertyBlock(_materialPropertyBlock);
 			_hitFlashEndTime = Time.time + hitFlashDuration;
