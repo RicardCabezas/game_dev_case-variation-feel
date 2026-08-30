@@ -44,7 +44,7 @@ namespace Game.GamePlay.Enemies
 		{
 			if (_enemyViews.TryGetValue(enemyState.Id, out EnemyView enemyView))
 			{
-				enemyView.transform.position = enemyState.Position;
+				enemyView.SetPosition(enemyState.Position);
 			}
 		}
 

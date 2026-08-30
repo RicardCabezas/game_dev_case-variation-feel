@@ -13,12 +13,9 @@ namespace Game.GamePlay.Enemies
 		[SerializeField] private float rotationSpeed = 10f;
 
 		private HeroController _heroController;
-		private Vector3 _previousPosition;
-		private bool _isMoving;
 
 		private void Start()
 		{
-			_previousPosition = transform.position;
 			ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
 		}
 
@@ -29,8 +26,6 @@ namespace Game.GamePlay.Enemies
 
 		private void Update()
 		{
-			UpdateMovementAnimator();
-
 			if (_heroController == null || _heroController.CurrentState.IsDead) return;
 
 			Vector3 heroPosition = _heroController.CurrentState.Position;
@@ -43,15 +38,10 @@ namespace Game.GamePlay.Enemies
 			}
 		}
 
-		private void UpdateMovementAnimator()
+		public void SetPosition(Vector3 position)
 		{
-			bool isMoving = (transform.position - _previousPosition).sqrMagnitude > 0.000001f;
-			_previousPosition = transform.position;
-
-			if (isMoving == _isMoving || animator == null) return;
-
-			_isMoving = isMoving;
-			animator.SetBool(IsMovingHash, _isMoving);
+			transform.position = position;
+			animator?.SetBool(IsMovingHash, true);
 		}
 
 		private void OnDestroy()
