@@ -173,15 +173,31 @@ Important absence: there is no public attack-start event, no nonlethal enemy-hea
 
 ## Project Conventions Worth Following
 
-- Feature-oriented folders and assembly definitions: `Core`, `Features/Entities`, `Weapons`, `World`, `Biomes`, `UI`, and `JoystickInput` each separate runtime concerns. This is supported by the matching `.asmdef` files and namespaces.
-- Plain controller/service ownership for gameplay; `MonoBehaviour` classes are primarily views/containers. Controllers use injected references, while views acquire services through `ServicesLocator` after the initialization event.
-- Tunables/content are serialized in ScriptableObjects with private fields and public read-only properties. Runtime config lookup uses `Resources` assets named after singleton types; content lists use separate `EnemyConfig`/`WeaponConfig` assets.
-- State is exposed through immutable-style structs with get-only properties (`HeroState`, `EnemyState`, `JoystickState`) and replaced as a whole when changed.
-- State-to-view communication uses `Action<T>` events. Subscribers explicitly unsubscribe in `OnDestroy`; button listeners are added and removed in the same view lifecycle.
-- Runtime view composition is prefab-based: containers instantiate configured prefabs, then set parent/transform references. Weapon visuals are child-instantiated under a serialized slot.
-- Async service/controller loops use UniTask plus `CancellationTokenSource`; services cancel/dispose tokens in `Reset`, and `ServicesLocator` resets services in reverse initialization order.
-- Small inconsistency, not a global rule: services with no dependencies return either `null` (`WeaponsService`, `WorldService`) or `Array.Empty<Type>()` (`JoystickInputService`).
-- Isolated wiring gaps visible in content: three enemy configs and three weapon configs exist, but spawn/initialization use list index zero; weapon switching exists as API but has no scene caller.
+The following rules are supported by multiple feature folders/classes and are the safest defaults for small additions:
+
+- Keep feature boundaries. Runtime code is grouped into `Core`, `Features/Entities`, `Weapons`, `World`, `Biomes`, `UI`, and `JoystickInput`, with matching `.asmdef` files and namespaces. Put new code beside the feature that owns its state or presentation.
+- Keep authoritative gameplay state in plain services/controllers. `HeroController` owns `HeroState`; `EnemiesController` owns the enemy dictionary and `EnemyState` values; `WeaponsService` owns the current weapon. Existing `MonoBehaviour` classes are views, containers, or world composition objects.
+- Pass controller/service dependencies explicitly when constructing controllers. `EntitiesService` injects `EnemiesController`, `JoystickInputService`, and `WeaponsService` into `HeroController`; views acquire services through `ServicesLocator` after `OnAllServicesInitialized`.
+- Treat `ServicesLocator` as the composition root. A new long-lived service should implement `IService`, declare required service types in `GetDependencies()`, initialize in `Initialize()`, and release loop/runtime state in `Reset()`.
+- Use the initialization event for scene/prefab views. Existing views subscribe in `Start`, obtain typed services in `OnServicesInitialized`, immediately synchronize from `CurrentState`, and unsubscribe in `OnDestroy`.
+- Communicate state changes with typed `Action<T>` events. Existing APIs use `OnStateChanged`, `OnEnemySpawned`, `OnEnemyRemoved`, `OnEnemyPositionChanged`, and `OnWeaponChanged`; event payloads are state/config objects rather than global message strings.
+- Preserve state value semantics. `HeroState`, `EnemyState`, and `JoystickState` expose get-only properties and are replaced as complete values. Consumers should read `CurrentState` or event payloads, not mutate controller internals.
+- Put tunables and content references in serialized private fields or ScriptableObjects. Config classes expose read-only properties; `Resources` contains singleton assets named `HeroConfig`, `EnemiesConfig`, `WeaponsConfig`, `WorldConfig`, `BiomeConfig`, and `JoystickInputConfig`.
+- Use separate content assets for reusable definitions. `EnemyConfig` holds stats plus an `EnemyView` prefab; `WeaponConfig` holds combat values plus a `WeaponView` prefab; aggregate config assets hold lists and lookup caches.
+- Keep view creation prefab-driven. Container views instantiate configured prefabs, parent them, set world/local transforms, and retain identity maps where needed (`EnemiesContainerView` maps enemy IDs to `EnemyView`; `HeroView` retains the current weapon view).
+- Keep presentation beside the view that owns the visual. `HeroView` owns hero Animator/rotation/weapon presentation; `EnemyView` owns enemy rotation; `GameOverOverlayView` owns overlay/button presentation; controllers should not reach into Animator, UI, or prefab components.
+- Match existing lifecycle cleanup. Event subscriptions are removed in `OnDestroy`; button listeners are removed there; runtime objects created by a view are destroyed by that view; UniTask loops use `CancellationTokenSource` and are cancelled/disposed during reset.
+- Follow existing API naming. Types use `Service`, `Controller`, `View`, `Config`, and `State` suffixes; events use `On...`; public state/config access is exposed through properties; serialized fields remain private and use `[SerializeField]`.
+- Keep feedback decoupled from combat iteration. Attach presentation to authoritative state/method boundaries such as `HeroController.TakeHit`, `HeroController.OnStateChanged`, `EnemiesController.AttackEnemy`, and `OnEnemyRemoved`; do not make enemy movement code know about individual UI/audio/VFX consumers.
+
+Boundaries to preserve when extending the project:
+
+- `HeroController` currently owns the decision to move versus auto-attack, while `EnemiesController` owns enemy movement, enemy damage, and removal. Do not duplicate those decisions in views.
+- `OnEnemyPositionChanged` is a movement/presentation event, not a general enemy-health event. `AttackEnemy` updates nonlethal health without notifying views; `OnEnemyRemoved` only identifies lethal removal.
+- `HeroController.OnStateChanged` is emitted for movement, incoming damage, and restart, but not after its attack timestamp update. Treat attack-start feedback as a separate concern at the existing attack boundary if required.
+- Config lists are data sources, not proof that all entries are active: current spawn/initial-weapon paths use list index zero. Verify intended content selection before depending on other entries.
+
+Not established as project-wide conventions: whether no-dependency services should return `null` or `Array.Empty<Type>()` (`WeaponsService`/`WorldService` versus `JoystickInputService`), and whether new initialization belongs in `Awake` or `Start`. Follow the nearest analogous class and avoid broadening the pattern without evidence.
 
 ## Performance-Sensitive Areas
 

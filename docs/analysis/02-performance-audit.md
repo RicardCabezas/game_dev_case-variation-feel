@@ -5,15 +5,26 @@
 > not treated as measured performance problems unless validated using
 > runtime data.
 
-## Scope and evidence limits
+## Evidence used
 
-Reviewed runtime gameplay code, scene/prefab YAML, URP settings, project settings, and Addressables configuration. `docs/profiling/` is absent; no Profiler capture, Profile Analyzer export, GPU capture, Memory Profiler summary, CSV, build report, or `Editor.log` was available. Binary profiler files were not present.
+Reviewed gameplay code, prefabs, URP/quality settings, and project settings. Runtime evidence was provided by the candidate from target-device Unity Profiler, Profile Analyzer, GPU Usage/Hierarchy, and Frame Debugger captures.
 
-Therefore this audit has **no CONFIRMED findings**. Runtime measurements must decide whether any item below merits work. Default gameplay configuration caps enemies at 20 and spawns one every two seconds.
+Raw Unity `.data` / `.pdata` captures were not used for timing claims because they are proprietary binary formats that cannot be safely decoded here. GPU recording warns about measurement overhead; GPU-Hierarchy numbers identify contributors and bottleneck direction, but are not release-frame-time predictions.
 
-## PERF-01 — Per-frame enemy-key collection allocation
+Default gameplay configuration caps enemies at 20. Android project code does not set `Application.targetFrameRate`; the observed initial 30 FPS cadence was Unity mobile's default target, not a measured rendering limit. Tests below use an explicit 90 FPS target.
 
-**Status:** LIKELY
+## Tested cases
+
+| Case | Runtime result | Conclusion |
+| --- | --- | --- |
+| **20 moving bees** | 299 frames: 11.08 ms median, 10.93–11.21 ms IQR, 12.12 ms max | Stable near 90 FPS. Current configured cap is healthy on tested device. |
+| **200 moving bees** | 299 frames: 19.87 ms median, 18.76–21.03 ms IQR, 26.84 ms max | About 50 FPS; misses 90 FPS budget. GPU/render work is limiting direction. |
+| **2,000 stationary bees** | 36.09 ms median after hit-log removal; 71.77 ms before | Hit logging accounted for a 49.7% median-frame reduction. Stress-only result. |
+| **2,000 moving bees** | 94.57 ms median; GPU Hierarchy selected 197.84 ms GPU / 80.76 ms CPU | Extreme swarm is both GPU- and CPU-limited. Not representative of configured gameplay. |
+
+## PERF-01 — High-frequency combat logging creates avoidable combat cost
+
+**Status:** CONFIRMED
 
 **Severity:** Medium
 
@@ -21,41 +32,33 @@ Therefore this audit has **no CONFIRMED findings**. Runtime measurements must de
 
 ### Location
 
-`Assets/Features/Entities/Scripts/Controllers/EnemiesController.cs`, `UpdateLoop` (lines 123–143), specifically `new List<int>(_enemies.Keys)` on line 133.
+`EnemiesController.AttackEnemy`; `HeroController.TakeHit`.
 
 ### Evidence
 
 **Static evidence**
 
-Every non-dead gameplay frame creates a `List<int>` from dictionary keys before updating enemies. This allocates list storage and copies current keys even when enemy count is zero. It avoids collection modification during enumeration, but code does not show a need to remove enemies inside this loop.
+Both recurring combat methods call interpolated `Debug.Log`; hit/death paths add further logs.
 
 **Runtime evidence**
 
-Not yet measured. No profiling artifacts supplied.
+In 2,000-bee stress, `TakeHit` and nested log/stack-trace markers were about 40 ms when present. Removing only `HeroController.TakeHit`'s hit log reduced median frame time from 71.77 ms to 36.09 ms (49.7%).
 
 ### Expected execution frequency
 
-Once per `PlayerLoopTiming.Update` while hero lives: typically once per rendered gameplay frame. At default cap, copied key count reaches 20.
+Every hero attack or enemy hit. Frequency rises sharply when many enemies attack together.
 
 ### Potential runtime impact
 
-Recurring managed allocation and later GC work; possibly CPU for list creation/copy. No measured frame or GC impact claimed.
+CPU spikes, stack-trace work, managed allocations, Console/profiler traffic, and possible GC.
 
 ### Profiler validation
 
-Gameplay scenario: profile development build for 60 seconds after reaching 20 live enemies; repeat with zero enemies and unchanged camera/input.
-
-Profiler module/tool: CPU Usage in Timeline or Hierarchy with **GC Alloc** column; Memory module for managed-heap/GC collection correlation. Keep Deep Profile off for first capture.
-
-Marker/call to inspect: `Game.GamePlay.Enemies.EnemiesController.UpdateLoop`; expand managed call tree around `new List<int>(_enemies.Keys)` if visible.
-
-Metric to record: GC Alloc per frame, allocation call count, GC collection occurrence, and self/total CPU time for loop.
-
-CONFIRM if this call produces repeatable per-frame managed allocation that grows with active enemy count and correlates with unwanted GC or frame-time cost. REJECT as actionable if allocation is absent/insignificant in target build and no GC or frame-time signal follows.
+At normal 20-bee combat, compare 300 frames with/without development-only combat logs. Record call count, `Debug.Log` total time, GC Alloc, P50/P99 frame time, and worst combat frame. Confirm if log removal improves comparable combat frames; reject as a release issue if logs are absent/negligible in the player build.
 
 ### Potential fix
 
-Reuse a private ID buffer, or enumerate safely without snapshotting if mutation is structurally impossible during update. Preserve safe removal behavior; do not change before capture confirms cost.
+Gate high-frequency combat logs behind an explicit development-only logging mechanism. Do not remove telemetry or errors without approval.
 
 ### Estimated active implementation effort
 
@@ -63,53 +66,47 @@ S
 
 ### Regression risk
 
-Medium — event handlers or future update logic could mutate enemy collection during enumeration.
+Low — reduced debugging visibility only.
 
-## PERF-02 — Enemy simulation, view rotation, animation scale together per frame
+## PERF-02 — Moving swarms above 20 bees exceed the 90-FPS budget
 
-**Status:** HYPOTHESIS
+**Status:** CONFIRMED
 
-**Severity:** Low
+**Severity:** Medium
 
-**Confidence:** Medium
+**Confidence:** High
 
 ### Location
 
-`Assets/Features/Entities/Scripts/Controllers/EnemiesController.cs`, `UpdateEnemy` (lines 146–170); `Assets/Features/Entities/Scripts/View/Enemies/EnemyView.cs`, `Update` (lines 24–36); enemy prefab `Assets/Features/Entities/View/Enemies/Local/BeeNormal/BeeNormal.prefab` (`Animator` and `SkinnedMeshRenderer`).
+`EnemiesController.UpdateEnemy`; `EnemyView.Update`; `BeeNormal` prefab (`Animator`, `SkinnedMeshRenderer`, shadows).
 
 ### Evidence
 
 **Static evidence**
 
-For each live enemy, controller code calculates distance and movement, creates updated value-state, updates dictionary, and invokes a position event. Each matching view sets transform position. Independently, each `EnemyView.Update` normalizes a direction and runs `Quaternion.LookRotation` plus `Quaternion.Slerp` each frame. Default cap is 20. Bee prefab also has enabled Animator, skinned renderer, shadow casting, shadow receiving, and reflection-probe usage.
+Each live enemy is moved, state-updated, and emits position changes. Each view also rotates every frame. Bees are animated, skinned, and cast/receive shadows. Default cap is 20.
 
 **Runtime evidence**
 
-Not yet measured. No CPU, animation, Render Thread, or GPU capture supplied.
+20 moving bees hold 11.08 ms median. At 200 moving bees, median rises to 19.87 ms. CPU profile spends 9.10 ms in present wait, while GPU Hierarchy shows 58.52 ms GPU versus 21.90 ms CPU in an instrumented selected frame. It records 407 batches, 366k triangles, 257k vertices, and 4.79 ms in `UpdateAllSkinnedMeshes` across 400 draws.
+
+At 2,000 moving bees, frame median reaches 94.57 ms; selected GPU Hierarchy is 197.84 ms GPU versus 80.76 ms CPU. Movement increases animation/job work and render/present waits. GPU instrumentation inflates exact timing but supports GPU as the limiting direction above the normal cap.
 
 ### Expected execution frequency
 
-Controller work runs once per live enemy per Update; view rotation also runs once per instantiated enemy per MonoBehaviour Update. At configured cap this is up to 20 simulation passes plus 20 view-rotation passes per frame, while hero is alive.
+Per live enemy, every frame while the hero moves and bees follow.
 
 ### Potential runtime impact
 
-Main-thread CPU, animation CPU, render-thread skinning/shadow submission, and GPU. Static code cannot establish bottleneck or material cost.
+Above the 20-enemy cap: GPU rendering/skinning, render/present waits, animation/jobs, and main-thread simulation. No current 20-bee bottleneck is measured.
 
 ### Profiler validation
 
-Gameplay scenario: capture two comparable 30-second development-build runs: zero enemies, then 20 enemies chasing hero in camera view. Keep hero still after enemies converge; repeat with camera aimed away from enemies.
-
-Profiler module/tool: CPU Usage Timeline plus Rendering and GPU Usage modules where platform supports GPU profiling. Use Profile Analyzer to compare captures.
-
-Marker/call to inspect: `EnemiesController.UpdateLoop`, `EnemyView.Update`, `BehaviourUpdate`, animation/Animator markers, `RenderLoop.Draw`, shadow-rendering markers, and Render Thread time.
-
-Metric to record: frame time, main-thread and Render Thread time, self/total CPU for listed calls, draw-call count, batches, triangles, and GPU frame time.
-
-CONFIRM if full-cap capture shows material, repeatable scaling in those markers or frame time versus zero-enemy baseline. REJECT as actionable if full-cap cost remains small and flat on target hardware.
+Capture 300-frame moving runs at 20, 50, 100, 150, and 200 bees after warm-up. Record P50/P99 frame time, CPU work excluding waits, batches, triangles, skinned-mesh work, and GPU time. Confirm the product-supported count from its target-frame budget; use Android GPU trace if count above 20 becomes product scope.
 
 ### Potential fix
 
-Only after evidence: consolidate redundant facing/movement work, lower animation update rate for off-screen/distant enemies, or tune shadows/skin visibility. Choose based on dominant measured marker; do not apply all changes together.
+No change needed for the current cap. If larger swarms are intended: first keep combat logs gated, then reduce update/animation/render participation for distant or off-screen enemies based on a measured count budget.
 
 ### Estimated active implementation effort
 
@@ -117,107 +114,45 @@ M
 
 ### Regression risk
 
-Medium — enemy facing, animation timing, and visibility behavior affect game feel.
+Medium — changes can affect enemy responsiveness, readability, or shadows.
 
-## PERF-03 — Spawn/death lifecycle may create intermittent frame spikes
+## PERF-03 — Per-frame enemy-key copy may allocate managed memory
 
-**Status:** HYPOTHESIS
+**Status:** LIKELY
 
 **Severity:** Low
 
-**Confidence:** Medium
+**Confidence:** High
 
 ### Location
 
-`Assets/Features/Entities/Scripts/Controllers/EnemiesController.cs`, `SpawnLoop`/`SpawnEnemy` (lines 86–112) and `RemoveEnemy` (lines 58–64); `Assets/Features/Entities/Scripts/View/Enemies/EnemiesContainerView.cs`, `OnEnemySpawned`/`OnEnemyRemoved` (lines 28–41).
+`Assets/Features/Entities/Scripts/Controllers/EnemiesController.cs`, `UpdateLoop`.
 
 ### Evidence
 
 **Static evidence**
 
-Enemy spawn event instantiates a full enemy prefab; removal destroys it. Spawn interval is two seconds and no reuse/pool exists. Each instantiated BeeNormal includes an Animator, SkinnedMeshRenderer, transform hierarchy, and `EnemyView`. Current configuration limits concurrent enemies to 20.
+The update loop creates `new List<int>(_enemies.Keys)` every frame before updating enemies.
 
 **Runtime evidence**
 
-Not yet measured. No spawn/destroy timing, GC, or hitch capture supplied.
+Not yet attributed. Captures show small per-frame GC allocation in some gameplay frames, but no call-stack evidence ties it to this list copy.
 
 ### Expected execution frequency
 
-One spawn attempt every two seconds while below cap. Destroy frequency depends on combat and restart behavior; sustained fast kills can keep lifecycle events recurring, but code/config does not establish enough churn to justify pooling now.
+Once per gameplay frame while enemies exist; allocation size grows with active enemy count.
 
 ### Potential runtime impact
 
-Short main-thread CPU and managed/native allocation spikes at spawn/destroy; possible animation/renderer setup cost. No sustained-cost claim.
+Managed allocation and later GC. No measured normal-cap frame-time effect claimed.
 
 ### Profiler validation
 
-Gameplay scenario: development build, repeatedly kill enemies for two minutes so each spawn is removed before next cap; separately press restart after reaching 20 enemies.
-
-Profiler module/tool: CPU Usage Timeline with GC Alloc, Memory module, and Profile Analyzer frame-spike comparison.
-
-Marker/call to inspect: `Object.Instantiate`, `Object.Destroy`, `EnemiesContainerView.OnEnemySpawned`, `OnEnemyRemoved`, Animator initialization, and GC collections.
-
-Metric to record: worst and median frame time around each lifecycle event, GC allocation on those frames, object count before/after repeated cycle, and persistent memory growth.
-
-CONFIRM if lifecycle frames repeatedly create visible spikes or retained-object/memory growth versus steady combat. REJECT if per-event costs remain within normal frame variance and memory returns to baseline.
+At 20 moving bees, inspect `EnemiesController.UpdateLoop` in CPU Hierarchy with GC Alloc and call stacks. Record allocation/call, collection count, and total time. Confirm only if this call allocates repeatedly and correlates with GC or frame-time cost; reject if insignificant on device.
 
 ### Potential fix
 
-If confirmed, pool only enemy views, with explicit reset for transform, animator state, subscriptions, and health/state binding. Otherwise retain current simpler lifecycle.
-
-### Estimated active implementation effort
-
-M
-
-### Regression risk
-
-Medium — stale state, duplicate event subscriptions, and Animator reset defects are common pool regressions.
-
-## PERF-04 — URP opaque-texture copy needs GPU verification
-
-**Status:** HYPOTHESIS
-
-**Severity:** Low
-
-**Confidence:** Medium
-
-### Location
-
-`Assets/Settings/UniversalRP-Settings.asset`: `m_RequireOpaqueTexture: 1`; `Assets/Settings/ForwardRenderer.asset`: no renderer features. `Assets/Scenes/MainScene.unity`: one main camera, MSAA enabled, post-processing disabled.
-
-### Evidence
-
-**Static evidence**
-
-URP requests an opaque texture. On relevant platform/path this can introduce color-copy/bandwidth work. Project is configured for Android and defaults to 1920×1080. Static settings do not prove that a `Copy Color` pass executes on target device, nor that its cost is meaningful. Scene/prefab scan found no existing particle systems or post-processing effects.
-
-**Runtime evidence**
-
-Not yet measured. No Frame Debugger or GPU Profiler capture supplied.
-
-### Expected execution frequency
-
-Potentially once per camera frame if URP produces opaque texture for active renderer/platform. Exact behavior must be observed in target build.
-
-### Potential runtime impact
-
-GPU and memory-bandwidth cost, especially at high resolution; not a claimed rendering bottleneck.
-
-### Profiler validation
-
-Gameplay scenario: full-cap enemy scene, joystick active, Game Over overlay hidden; capture same camera view on target Android device and Editor for diagnosis only.
-
-Profiler module/tool: Frame Debugger, GPU Usage profiler or platform GPU tool, and Game View Stats.
-
-Marker/call to inspect: `Copy Color`/opaque-texture pass, camera color target transitions, GPU duration, render passes, and render-target bandwidth indicators where available.
-
-Metric to record: existence of copy pass, its GPU time, total GPU frame time, render-pass count, resolution, and draw/batch counts.
-
-CONFIRM if active target capture contains copy pass with repeatable meaningful GPU time. REJECT if pass is absent or its cost is insignificant. Only then assess whether any material actually samples scene color before changing setting.
-
-### Potential fix
-
-Disable opaque texture only if capture confirms cost and material/frame-debugger audit proves scene-color sampling unnecessary.
+Reuse an ID buffer, or avoid the copy only if safe against collection mutation during update.
 
 ### Estimated active implementation effort
 
@@ -225,40 +160,34 @@ S
 
 ### Regression risk
 
-Medium — shaders or future screen-space feedback can require opaque texture.
+Medium — removal during enumeration must remain safe.
 
 # Top Profiling Experiments
 
-1. **Full-cap enemy CPU/GC baseline — PERF-01, PERF-02.** Let 20 enemies spawn, keep them pursuing hero for 60 seconds, then repeat at zero enemies. Use development build CPU Usage Timeline/Hierarchy and Memory modules. Record frame time, `GC Alloc` per frame, GC collections, `EnemiesController.UpdateLoop`, `EnemyView.Update`, Animator, and Render Thread self/total time. Expected signal: recurring allocation from PERF-01 and count-correlated CPU from PERF-02, if either matters.
+1. **Normal-cap confidence run — PERF-01, PERF-02.** 20 moving bees, 300 frames, target 90, with GPU recording disabled. Record P50/P99, CPU excluding waits, GC Alloc, thermals, and battery. Expected signal: retain stable ~11.1 ms pacing.
 
-2. **Lifecycle spike test — PERF-03.** Kill every spawned enemy for two minutes; then reach 20 and press Restart. Use Timeline, Memory, and Profile Analyzer. Record worst/median spawn/destroy frame time, allocations, GC, object count, and retained memory after cycle. Expected signal: repeatable `Instantiate`/`Destroy` spikes or memory growth, not isolated Editor noise.
+2. **Swarm threshold sweep — PERF-02.** Moving 20/50/100/150/200 bees, same camera/device/build. Record P50/P99, batches, geometry, skinning, and present wait. Expected signal: define supported swarm count for 60 and 90 FPS.
 
-3. **Target-device GPU/frame pass capture — PERF-02, PERF-04.** On Android hardware, show 20 visible enemies with joystick active. Capture GPU Usage plus Frame Debugger. Record GPU frame time, `Copy Color` presence/cost, shadow passes, batches, draw calls, triangles, and Render Thread time. Expected signal: distinguish CPU enemy work from GPU/shadow/bandwidth limitation.
-
-4. **UI interaction baseline — game-feel guardrail.** Hold and move joystick for 30 seconds; repeat with Game Over overlay shown. Use CPU Usage/UI markers, Frame Debugger, and Game View Stats. Record Canvas rebuild/batch activity, UI batches, and frame time. Expected signal: whether current single-Canvas UI leaves headroom for damage numbers or hit overlays.
+3. **GPU trace for a product swarm count — PERF-02.** If more than 20 bees are planned, capture Android GPU trace at the intended count. Record GPU active time, queue depth, skinned-mesh cost, opaque/shadow work, and present timing. Expected signal: distinguish real GPU saturation from Unity GPU-profiler overhead.
 
 # Rendering / Frame Debugger Checks
 
-- Capture active scene at zero and 20 visible BeeNormal enemies. Compare opaque, shadow, transparent/UI pass count, batches, material switches, and triangles. BeeNormal is skinned, casts/receives shadows, and uses reflection probes; measure their actual contribution before tuning.
-- Inspect whether `Copy Color`/opaque texture exists. If it does, inspect exact GPU duration and any material sampling scene color before considering setting change.
-- Capture joystick inactive and held/moving. Verify whether moving its RectTransforms causes Canvas rebuilds or only transform updates; current UI is one scene Canvas with two joystick images plus Game Over elements.
-- Add no rendering verdict from Game View Stats alone. Use it to orient capture, then validate with Frame Debugger/GPU timing.
+- Current normal-cap scene uses a small number of SetPass calls; draw-call reduction alone is not the priority.
+- At 200+ bees, inspect per-bee opaque and shadow events, `UpdateAllSkinnedMeshes`, triangle/vertex growth, and material/shader variants.
+- Keep Opaque Texture disabled only if visual audit passes. Its removal eliminated `CopyColor` and improved an instrumented no-bee GPU sample, but needs clean platform-trace confirmation for release magnitude.
 
 # Performance Constraints for Added Game Feel
 
-- **VFX/particles:** none exist today, so no current baseline cost. Add bounded concurrent effects and profile 20-enemy combat first. Prioritize transparent-overdraw and GPU-pass checks over draw-call count alone. Reuse/pool only if lifecycle capture confirms spikes at intended effect rate.
-- **Audio:** no active `AudioSource` found in scene/prefabs and no runtime audio data exists. Establish target-device Audio module baseline before frequent hit/attack sounds; measure voice count, DSP load, and allocations during sustained combat.
-- **Camera effects:** project uses Cinemachine follow camera. Measure after adding impulse/shake/extensions in full-cap combat; keep feedback event-driven, not a new per-enemy camera update loop.
-- **UI feedback:** joystick already updates while held inside main Canvas. Add damage numbers/hit overlays only with Canvas rebuild, UI batch, and transparent-overdraw capture. Bound simultaneous feedback and test Game Over plus joystick-active state.
-- **Gameplay simulation:** treat 20 active animated/skinned enemies as current measurement scenario. Increase enemy cap or add per-enemy feedback only after repeating PERF-01/PERF-02 capture at intended maximum.
+- **Normal cap:** 20 moving bees sustain ~90 FPS on tested device. Use this as the baseline, not the 200/2,000 stress results.
+- **VFX/particles:** bound concurrent transparent effects; profile them during 20-bee movement before shipping. Do not pool by default; validate churn first.
+- **Audio:** keep hit/attack audio bounded and avoid per-hit logging. Establish voice/DSP baseline before adding layered swarm audio.
+- **Camera/UI:** profile camera shake, damage numbers, and overlays alongside moving 20 bees. Check Canvas rebuilds and transparent overdraw.
+- **Large swarms:** 200 bees already misses 90 FPS; 2,000 is far beyond current content budget. Treat higher counts as a separate feature with its own CPU/GPU budget.
 
 # Low-Priority / Rejected Static Concerns
 
-- `Resources.Load<T>` in `ScriptableObjectSingleton<T>` is cached after first access; startup-only configuration load, not recurring gameplay path.
-- Reflection service discovery and dependency ordering run during `ServicesLocator.Awake`; no evidence of repeat use in play loop.
-- `GetWeaponById` and `GetEnemyById` build dictionaries only once; no frequent caller found.
-- Hero weapon instantiate/destroy occurs on startup or explicit weapon switch; no code shows frequent switching.
-- No LINQ, physics raycasts/overlaps, `GetComponent`, hierarchy search, particle-system, or active audio call appears in production gameplay code. Do not invent concerns absent evidence.
-- `Debug.Log` exists on attacks/hits, but configured weapon cooldown is 1.5 seconds and no capture establishes log overhead on target. Include it only if combat profile shows logging-related cost.
-- `foreach` usage over small config/maps is not promoted; replacing it with `for` lacks evidence of value.
-- Addressables package/settings exist, but game code loads current content through `Resources`/prefab references and no build layout or runtime loading trace exists. No loading/memory finding can be supported.
+- `Resources.Load<T>` singleton loading is cached/startup-only.
+- Service discovery and dependency ordering are startup work.
+- Weapon instantiate/destroy is startup/switch-only, not recurring combat churn.
+- No evidence supports broad `foreach`/LINQ/GetComponent/pooling/DOTS rewrites.
+- No physics query, particle, or audio bottleneck is measured.
