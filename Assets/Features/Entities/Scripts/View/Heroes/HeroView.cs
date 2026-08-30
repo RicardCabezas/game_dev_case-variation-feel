@@ -14,6 +14,9 @@ namespace Game.GamePlay.Heroes
 		private static readonly int AttackHash = Animator.StringToHash("Attack");
 
 		[SerializeField] private Animator animator;
+		[SerializeField] private HitFlashView hitFlash;
+		[SerializeField] private Color hitFlashColor = new Color(1f, 0.2f, 0.2f, 1f);
+		[SerializeField] private float hitFlashDuration = 0.1f;
 		[SerializeField] private float rotationSpeed = 10f;
 		[SerializeField] private Transform weaponSlot;
 
@@ -22,6 +25,14 @@ namespace Game.GamePlay.Heroes
 		private WeaponsService _weaponsService;
 		private Vector2 _currentMovementInput;
 		private WeaponView _currentWeaponView;
+		private HitFlashView _hitFlashView;
+
+		private void Awake()
+		{
+			_hitFlashView = hitFlash != null ? hitFlash : GetComponent<HitFlashView>();
+			if (_hitFlashView == null) _hitFlashView = gameObject.AddComponent<HitFlashView>();
+			_hitFlashView.Configure(hitFlashColor, hitFlashDuration);
+		}
 
 		private void Start()
 		{
@@ -36,6 +47,7 @@ namespace Game.GamePlay.Heroes
 
 			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
 			_heroController.OnStateChanged += OnHeroStateChanged;
+			_heroController.OnHeroHit += OnHeroHit;
 			_heroController.OnAttackPerformed += OnAttackPerformed;
 			_weaponsService.OnWeaponChanged += OnWeaponChanged;
 
@@ -54,6 +66,7 @@ namespace Game.GamePlay.Heroes
 			if (_heroController != null)
 			{
 				_heroController.OnStateChanged -= OnHeroStateChanged;
+				_heroController.OnHeroHit -= OnHeroHit;
 				_heroController.OnAttackPerformed -= OnAttackPerformed;
 			}
 			if (_weaponsService != null)
@@ -75,6 +88,11 @@ namespace Game.GamePlay.Heroes
 		private void OnHeroStateChanged(HeroState heroState)
 		{
 			transform.position = heroState.Position;
+		}
+
+		private void OnHeroHit(HeroHitResult hitResult)
+		{
+			_hitFlashView?.Play();
 		}
 
 		private void OnAttackPerformed(Vector3 targetPosition)

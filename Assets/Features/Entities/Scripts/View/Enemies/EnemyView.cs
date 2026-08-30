@@ -12,18 +12,22 @@ namespace Game.GamePlay.Enemies
 		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
 		private static readonly int DamageHash = Animator.StringToHash(Constants.Animator.Bee.Damage);
 		private static readonly int AttackHash = Animator.StringToHash(Constants.Animator.Bee.Attack);
-		private static readonly int BaseColorHash = Shader.PropertyToID("_BaseColor");
 
 		[SerializeField] private Animator animator;
-		[SerializeField] private SkinnedMeshRenderer meshRenderer;
-		[SerializeField] private Color hitFlashColor = Color.white;
+		[SerializeField] private HitFlashView hitFlash;
+		[SerializeField] private Color hitFlashColor = new Color(1f, 0.2f, 0.2f, 1f);
 		[SerializeField] private float hitFlashDuration = 0.1f;
 		[SerializeField] private float rotationSpeed = 10f;
 
 		private HeroController _heroController;
-		private MaterialPropertyBlock _materialPropertyBlock;
-		private float _hitFlashEndTime;
-		private bool _isHitFlashActive;
+		private HitFlashView _hitFlashView;
+
+		private void Awake()
+		{
+			_hitFlashView = hitFlash != null ? hitFlash : GetComponent<HitFlashView>();
+			if (_hitFlashView == null) _hitFlashView = gameObject.AddComponent<HitFlashView>();
+			_hitFlashView.Configure(hitFlashColor, hitFlashDuration);
+		}
 
 		private void Start()
 		{
@@ -37,7 +41,6 @@ namespace Game.GamePlay.Enemies
 
 		private void Update()
 		{
-			UpdateHitFlash();
 			if (_heroController == null || _heroController.CurrentState.IsDead) return;
 
 			Vector3 heroPosition = _heroController.CurrentState.Position;
@@ -62,13 +65,7 @@ namespace Game.GamePlay.Enemies
 		public void PlayDamage()
 		{
 			animator?.SetTrigger(DamageHash);
-			if (meshRenderer == null) return;
-
-			_materialPropertyBlock ??= new MaterialPropertyBlock();
-			_materialPropertyBlock.SetColor(BaseColorHash, hitFlashColor);
-			meshRenderer.SetPropertyBlock(_materialPropertyBlock);
-			_hitFlashEndTime = Time.time + hitFlashDuration;
-			_isHitFlashActive = true;
+			_hitFlashView?.Play();
 		}
 
 		/// <summary>Plays attack presentation for controller-reported enemy attack.</summary>
@@ -78,14 +75,6 @@ namespace Game.GamePlay.Enemies
 			animator.SetBool(IsMovingHash, false);
 			animator.SetTrigger(AttackHash);
 		}
-		private void UpdateHitFlash()
-		{
-			if (!_isHitFlashActive || Time.time < _hitFlashEndTime || meshRenderer == null) return;
-
-			meshRenderer.SetPropertyBlock(null);
-			_isHitFlashActive = false;
-		}
-
 		private void OnDestroy()
 		{
 			ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
