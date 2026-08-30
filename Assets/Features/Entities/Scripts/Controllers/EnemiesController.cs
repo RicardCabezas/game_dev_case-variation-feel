@@ -12,7 +12,6 @@ namespace Game.GamePlay.Enemies
 	public class EnemiesController
 	{
 		private const int SeparationPasses = 2;
-		private const int SpawnPositionAttempts = 8;
 
 		private HeroController _heroController;
 
@@ -133,7 +132,7 @@ namespace Game.GamePlay.Enemies
 			if (EnemiesConfig.Instance.Enemies.Count == 0) return;
 
 			Vector3 playerPosition = _heroController.CurrentState.Position;
-			if (!TryGetSpawnPosition(playerPosition, out Vector3 spawnPosition)) return;
+			Vector3 spawnPosition = GetRandomPositionAroundPlayer(playerPosition);
 
 			int enemyId = _nextEnemyId++;
 			EnemyConfig enemyConfig = EnemiesConfig.Instance.Enemies[0];
@@ -143,23 +142,13 @@ namespace Game.GamePlay.Enemies
 			OnEnemySpawned?.Invoke(newEnemy);
 		}
 
-		private bool TryGetSpawnPosition(Vector3 playerPosition, out Vector3 spawnPosition)
+		private Vector3 GetRandomPositionAroundPlayer(Vector3 playerPosition)
 		{
-			float spacing = EnemiesConfig.Instance.EnemySpacing;
-			float spacingSqr = spacing * spacing;
+			float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+			float x = playerPosition.x + EnemiesConfig.Instance.SpawnRadius * Mathf.Cos(angle);
+			float z = playerPosition.z + EnemiesConfig.Instance.SpawnRadius * Mathf.Sin(angle);
 
-			for (int i = 0; i < SpawnPositionAttempts; i++)
-			{
-				float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-				float x = playerPosition.x + EnemiesConfig.Instance.SpawnRadius * Mathf.Cos(angle);
-				float z = playerPosition.z + EnemiesConfig.Instance.SpawnRadius * Mathf.Sin(angle);
-				spawnPosition = new Vector3(x, playerPosition.y, z);
-
-				if (IsPositionClear(spawnPosition, spacingSqr)) return true;
-			}
-
-			spawnPosition = default;
-			return false;
+			return new Vector3(x, playerPosition.y, z);
 		}
 
 		private async UniTaskVoid UpdateLoop(CancellationToken cancellationToken)
@@ -259,18 +248,6 @@ namespace Game.GamePlay.Enemies
 
 			_updatedEnemiesBuffer[firstIndex] = new EnemyState(firstEnemy.Id, firstEnemy.Position + correction, firstEnemy.Health, firstEnemy.Config, firstEnemy.LastAttackTime);
 			_updatedEnemiesBuffer[secondIndex] = new EnemyState(secondEnemy.Id, secondEnemy.Position - correction, secondEnemy.Health, secondEnemy.Config, secondEnemy.LastAttackTime);
-		}
-
-		private bool IsPositionClear(Vector3 position, float spacingSqr)
-		{
-			if (spacingSqr <= 0f) return true;
-
-			foreach (EnemyState enemy in _enemies.Values)
-			{
-				if (GetHorizontalSqrDistance(position, enemy.Position) < spacingSqr) return false;
-			}
-
-			return true;
 		}
 
 		private void CollectEnemyIds()
