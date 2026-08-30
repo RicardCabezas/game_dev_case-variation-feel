@@ -15,6 +15,7 @@ namespace Game.GamePlay.Enemies
 		public event Action<EnemyState> OnEnemySpawned;
 		public event Action<int> OnEnemyRemoved;
 		public event Action<EnemyState> OnEnemyPositionChanged;
+		public event Action<EnemyHitResult> OnEnemyHit;
 
 		// State
 		private Dictionary<int, EnemyState> _enemies;
@@ -65,21 +66,23 @@ namespace Game.GamePlay.Enemies
 
 		public void AttackEnemy(EnemyState enemyState, int damage)
 		{
-			if (!_enemies.ContainsKey(enemyState.Id)) return;
+			if (!_enemies.TryGetValue(enemyState.Id, out EnemyState currentEnemy)) return;
 
-			int newHealth = enemyState.Health - damage;
+			int newHealth = currentEnemy.Health - damage;
+			bool isLethal = newHealth <= 0;
 
-			Debug.Log($"Attacked enemy id°{enemyState.Id}. Health : {enemyState.Health} -> {newHealth}");
+			Debug.Log($"Attacked enemy id°{currentEnemy.Id}. Health : {currentEnemy.Health} -> {newHealth}");
+			OnEnemyHit?.Invoke(new EnemyHitResult(currentEnemy.Id, damage, newHealth, isLethal));
 
-			if (newHealth <= 0)
+			if (isLethal)
 			{
-				Debug.Log($"Enemy id°{enemyState.Id} is dead. Removing it.");
-				RemoveEnemy(enemyState.Id);
+				Debug.Log($"Enemy id°{currentEnemy.Id} is dead. Removing it.");
+				RemoveEnemy(currentEnemy.Id);
 			}
 			else
 			{
-				EnemyState updatedEnemy = new EnemyState(enemyState.Id, enemyState.Position, newHealth, enemyState.Config);
-				_enemies[enemyState.Id] = updatedEnemy;
+				EnemyState updatedEnemy = new EnemyState(currentEnemy.Id, currentEnemy.Position, newHealth, currentEnemy.Config, currentEnemy.LastAttackTime);
+				_enemies[currentEnemy.Id] = updatedEnemy;
 			}
 		}
 

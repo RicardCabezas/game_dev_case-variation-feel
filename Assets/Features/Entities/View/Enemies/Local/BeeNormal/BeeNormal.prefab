@@ -46,6 +46,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 6926839794853975167}
+  meshRenderer: {fileID: 6926839794849704639}
+  hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  hitFlashDuration: 0.1
 --- !u!1 &6926839794863368101
 GameObject:
   m_ObjectHideFlags: 0
