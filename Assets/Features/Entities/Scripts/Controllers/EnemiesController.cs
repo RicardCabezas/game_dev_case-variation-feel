@@ -16,6 +16,7 @@ namespace Game.GamePlay.Enemies
 		public event Action<int> OnEnemyRemoved;
 		public event Action<EnemyState> OnEnemyPositionChanged;
 		public event Action<EnemyHitResult> OnEnemyHit;
+		public event Action<int> OnEnemyAttackPerformed;
 
 		// State
 		private Dictionary<int, EnemyState> _enemies;
@@ -165,6 +166,7 @@ namespace Game.GamePlay.Enemies
 				if (Time.time - enemy.LastAttackTime >= enemy.Config.AttackCooldown)
 				{
 					_heroController.TakeHit(enemy.Config.AttackDamage);
+					OnEnemyAttackPerformed?.Invoke(enemy.Id);
 
 					EnemyState updatedEnemy = new EnemyState(enemy.Id, enemy.Position, enemy.Health, enemy.Config, Time.time);
 					_enemies[enemy.Id] = updatedEnemy;
