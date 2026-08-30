@@ -68,7 +68,9 @@ namespace Game.GamePlay.Enemies
 
 		public void PlayAttack()
 		{
-			animator?.SetTrigger(AttackHash);
+			if (animator == null) return;
+			animator.SetBool(IsMovingHash, false);
+			animator.SetTrigger(AttackHash);
 		}
 		private void UpdateHitFlash()
 		{
