@@ -8,11 +8,19 @@ namespace Game.GamePlay.Enemies
 	public class EnemyView : MonoBehaviour
 	{
 		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
+		private static readonly int DamageHash = Animator.StringToHash(Constants.Animator.Bee.Damage);
+		private static readonly int BaseColorHash = Shader.PropertyToID("_BaseColor");
 
 		[SerializeField] private Animator animator;
+		[SerializeField] private SkinnedMeshRenderer meshRenderer;
+		[SerializeField] private Color hitFlashColor = Color.white;
+		[SerializeField] private float hitFlashDuration = 0.1f;
 		[SerializeField] private float rotationSpeed = 10f;
 
 		private HeroController _heroController;
+		private MaterialPropertyBlock _materialPropertyBlock;
+		private float _hitFlashEndTime;
+		private bool _isHitFlashActive;
 
 		private void Start()
 		{
@@ -26,6 +34,7 @@ namespace Game.GamePlay.Enemies
 
 		private void Update()
 		{
+			UpdateHitFlash();
 			if (_heroController == null || _heroController.CurrentState.IsDead) return;
 
 			Vector3 heroPosition = _heroController.CurrentState.Position;
@@ -42,6 +51,27 @@ namespace Game.GamePlay.Enemies
 		{
 			transform.position = position;
 			animator?.SetBool(IsMovingHash, true);
+		}
+
+		public void PlayDamage()
+		{
+			animator?.SetTrigger(DamageHash);
+			if (meshRenderer == null) return;
+
+			_materialPropertyBlock ??= new MaterialPropertyBlock();
+			meshRenderer.GetPropertyBlock(_materialPropertyBlock);
+			_materialPropertyBlock.SetColor(BaseColorHash, hitFlashColor);
+			meshRenderer.SetPropertyBlock(_materialPropertyBlock);
+			_hitFlashEndTime = Time.time + hitFlashDuration;
+			_isHitFlashActive = true;
+		}
+
+		private void UpdateHitFlash()
+		{
+			if (!_isHitFlashActive || Time.time < _hitFlashEndTime || meshRenderer == null) return;
+
+			meshRenderer.SetPropertyBlock(null);
+			_isHitFlashActive = false;
 		}
 
 		private void OnDestroy()
