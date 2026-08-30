@@ -7,6 +7,9 @@ namespace Game.GamePlay.Enemies
 {
 	public class EnemyView : MonoBehaviour
 	{
+		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
+
+		[SerializeField] private Animator animator;
 		[SerializeField] private float rotationSpeed = 10f;
 
 		private HeroController _heroController;
@@ -33,6 +36,12 @@ namespace Game.GamePlay.Enemies
 				Quaternion targetRotation = Quaternion.LookRotation(direction);
 				transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 			}
+		}
+
+		public void SetPosition(Vector3 position)
+		{
+			transform.position = position;
+			animator?.SetBool(IsMovingHash, true);
 		}
 
 		private void OnDestroy()
