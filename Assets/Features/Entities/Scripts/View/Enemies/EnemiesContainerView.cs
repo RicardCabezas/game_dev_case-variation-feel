@@ -24,6 +24,7 @@ namespace Game.GamePlay.Enemies
 			_enemiesController.OnEnemyRemoved += OnEnemyRemoved;
 			_enemiesController.OnEnemyPositionChanged += OnEnemyPositionChanged;
 			_enemiesController.OnEnemyHit += OnEnemyHit;
+			_enemiesController.OnEnemyAttackPerformed += OnEnemyAttackPerformed;
 		}
 
 		private void OnEnemySpawned(EnemyState enemyState)
@@ -59,6 +60,14 @@ namespace Game.GamePlay.Enemies
 			}
 		}
 
+		private void OnEnemyAttackPerformed(int enemyId)
+		{
+			if (_enemyViews.TryGetValue(enemyId, out EnemyView enemyView))
+			{
+				enemyView.PlayAttack();
+			}
+		}
+
 		private void OnDestroy()
 		{
 			ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
@@ -68,6 +77,7 @@ namespace Game.GamePlay.Enemies
 				_enemiesController.OnEnemyRemoved -= OnEnemyRemoved;
 				_enemiesController.OnEnemyPositionChanged -= OnEnemyPositionChanged;
 				_enemiesController.OnEnemyHit -= OnEnemyHit;
+				_enemiesController.OnEnemyAttackPerformed -= OnEnemyAttackPerformed;
 			}
 		}
 	}

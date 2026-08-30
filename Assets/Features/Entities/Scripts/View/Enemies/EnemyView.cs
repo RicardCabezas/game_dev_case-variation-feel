@@ -9,6 +9,7 @@ namespace Game.GamePlay.Enemies
 	{
 		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
 		private static readonly int DamageHash = Animator.StringToHash(Constants.Animator.Bee.Damage);
+		private static readonly int AttackHash = Animator.StringToHash(Constants.Animator.Bee.Attack);
 		private static readonly int BaseColorHash = Shader.PropertyToID("_BaseColor");
 
 		[SerializeField] private Animator animator;
@@ -63,6 +64,13 @@ namespace Game.GamePlay.Enemies
 			meshRenderer.SetPropertyBlock(_materialPropertyBlock);
 			_hitFlashEndTime = Time.time + hitFlashDuration;
 			_isHitFlashActive = true;
+		}
+
+		public void PlayAttack()
+		{
+			if (animator == null) return;
+			animator.SetBool(IsMovingHash, false);
+			animator.SetTrigger(AttackHash);
 		}
 		private void UpdateHitFlash()
 		{
