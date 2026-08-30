@@ -27,6 +27,10 @@ Controllers/services own state and decisions
   -> MonoBehaviour views mirror state and present prefabs
 ```
 
+This controller/view boundary applies to every feature, including UI. Given the
+project size and time constraints, UI follows the same architecture as gameplay
+rather than introducing a separate presentation pattern.
+
 Primary source locations:
 
 - Composition/lifecycle: `Assets/Core/ServicesManager/Scripts/ServicesLocator.cs`, `IService.cs`.
@@ -50,6 +54,15 @@ Put authoritative state and rules in the existing plain C# services/controllers:
 
 Views can cache presentation-only values, but must not become a second owner of health, enemy existence, cooldowns, or progression state.
 
+### UI state
+
+Apply the same separation to UI controllers:
+
+- UI controllers own UI state and presentation decisions without inheriting from `MonoBehaviour`.
+- UI controllers expose state and transitions through properties and typed events.
+- UI views subscribe to those events and perform Unity-facing presentation work.
+- UI controllers must not hold or call view instances, UI components, Animator, audio, camera, particles, or other presentation objects.
+
 ### Presentation
 
 Use `MonoBehaviour` views for Unity-facing work:
@@ -60,7 +73,7 @@ Use `MonoBehaviour` views for Unity-facing work:
 - `HeroContainerView` / `BiomeContainerView`: configured prefab composition.
 - `GameOverOverlayView` / `JoystickView`: UI state presentation.
 
-Keep visual consumers subscribed to events instead of making controllers reference Animator, UI, audio, camera, or particle components.
+Keep visual consumers subscribed to events instead of making any controller—including UI controllers—reference views, Animator, UI components, audio, camera, or particle components.
 
 ## Adding a New Service
 
@@ -80,6 +93,7 @@ Use this sequence when a task genuinely needs a new long-lived service:
 Follow current value-state shape:
 
 - Add a get-only property to the relevant `*State` struct.
+- Keep authoritative gameplay timing (for example, attack timestamps and next-allowed-action times) in the owning runtime state; keep controller fields limited to transient input bookkeeping.
 - Replace the complete state value when a controller changes it.
 - Emit the owning controller's typed event at the state transition.
 - Keep event payload sufficient for the consumer; existing payloads use `HeroState`, `EnemyState`, `JoystickState`, `WeaponConfig`, or enemy ID.
@@ -164,7 +178,7 @@ Before editing:
 
 While editing:
 
-- Keep gameplay decisions in controllers/services and Unity presentation in views.
+- Keep gameplay and UI decisions in controllers/services and Unity presentation in views.
 - Follow existing typed event and cleanup patterns.
 - Keep values configurable through the nearest existing config/view serialization pattern.
 - Avoid changing scene/prefab/config assets unless the task explicitly requires it.
