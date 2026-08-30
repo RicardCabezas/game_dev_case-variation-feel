@@ -9,6 +9,7 @@ namespace Game.GamePlay.Heroes
 	public class HeroView : MonoBehaviour
 	{
 		private static readonly int SpeedHash = Animator.StringToHash("Speed");
+		private static readonly int AttackHash = Animator.StringToHash("Attack");
 
 		[SerializeField] private Animator animator;
 		[SerializeField] private float rotationSpeed = 10f;
@@ -33,6 +34,7 @@ namespace Game.GamePlay.Heroes
 
 			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
 			_heroController.OnStateChanged += OnHeroStateChanged;
+			_heroController.OnAttackPerformed += OnAttackPerformed;
 			_weaponsService.OnWeaponChanged += OnWeaponChanged;
 
 			OnJoystickStateChanged(_joystickInputService.CurrentState);
@@ -50,6 +52,7 @@ namespace Game.GamePlay.Heroes
 			if (_heroController != null)
 			{
 				_heroController.OnStateChanged -= OnHeroStateChanged;
+				_heroController.OnAttackPerformed -= OnAttackPerformed;
 			}
 			if (_weaponsService != null)
 			{
@@ -70,6 +73,22 @@ namespace Game.GamePlay.Heroes
 		private void OnHeroStateChanged(HeroState heroState)
 		{
 			transform.position = heroState.Position;
+		}
+
+		private void OnAttackPerformed(Vector3 targetPosition)
+		{
+			Vector3 targetDirection = targetPosition - transform.position;
+			targetDirection.y = 0f;
+
+			if (targetDirection.sqrMagnitude > 0.01f)
+			{
+				transform.rotation = Quaternion.LookRotation(-targetDirection);
+			}
+
+			if (animator != null)
+			{
+				animator.SetTrigger(AttackHash);
+			}
 		}
 
 		private void Update()
