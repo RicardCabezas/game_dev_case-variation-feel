@@ -18,12 +18,15 @@ namespace Game.GamePlay.Heroes
 		// Internal State
 		private CancellationTokenSource _cancellationTokenSource;
 		private HeroState _currentState;
+		private bool _wasMoving;
 
 		// Public State
 		public HeroState CurrentState => _currentState;
 
 		// Events
 		public event Action<HeroState> OnStateChanged;
+		public event Action<Vector3> OnAttackPerformed;
+		public event Action<float> OnAttackCooldownStarted;
 
 		public UniTask<bool> Initialize(EnemiesController enemiesController, JoystickInputService joystickInputService, WeaponsService weaponsService)
 		{
@@ -32,7 +35,9 @@ namespace Game.GamePlay.Heroes
 			_weaponsService = weaponsService;
 
 			_currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f);
+			_wasMoving = joystickInputService.CurrentState.IsActive;
 			_cancellationTokenSource = new CancellationTokenSource();
+			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
 
 			UpdateLoop(_cancellationTokenSource.Token).Forget();
 
@@ -45,7 +50,7 @@ namespace Game.GamePlay.Heroes
 
 			int newHealth = Mathf.Max(0, _currentState.Health - damage);
 			Debug.Log($"Hero is taking a hit. Health : {_currentState.Health} -> {newHealth}");
-			_currentState = new HeroState(_currentState.Position, newHealth, _currentState.LastAttackTime);
+			_currentState = new HeroState(_currentState.Position, newHealth, _currentState.LastAttackTime, _currentState.NextAttackTime);
 			OnStateChanged?.Invoke(_currentState);
 
 			if (_currentState.IsDead)
@@ -57,11 +62,17 @@ namespace Game.GamePlay.Heroes
 		public void Restart()
 		{
 			_currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f);
+			_wasMoving = _joystickInputService.CurrentState.IsActive;
 			OnStateChanged?.Invoke(_currentState);
 		}
 
 		public UniTask Reset()
 		{
+			if (_joystickInputService != null)
+			{
+				_joystickInputService.OnStateChanged -= OnJoystickStateChanged;
+			}
+
 			_cancellationTokenSource?.Cancel();
 			_cancellationTokenSource?.Dispose();
 
@@ -77,6 +88,7 @@ namespace Game.GamePlay.Heroes
 					if (_joystickInputService.CurrentState.IsActive) UpdatePosition();
 					else AttackClosestEnemy();
 				}
+
 				await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
 			}
 		}
@@ -89,26 +101,50 @@ namespace Game.GamePlay.Heroes
 			Vector3 movement = new Vector3(-currentMovementInput.x, 0f, -currentMovementInput.y);
 			Vector3 newPosition = _currentState.Position + movement * (HeroConfig.Instance.MoveSpeed * Time.deltaTime);
 
-			_currentState = new HeroState(newPosition, _currentState.Health, _currentState.LastAttackTime);
+			_currentState = new HeroState(newPosition, _currentState.Health, _currentState.LastAttackTime, _currentState.NextAttackTime);
 			OnStateChanged?.Invoke(_currentState);
 		}
 
 		private void AttackClosestEnemy()
 		{
 			if (_weaponsService.CurrentWeapon == null) return;
-			if (Time.time - _currentState.LastAttackTime < _weaponsService.CurrentWeapon.Cooldown) return;
+			if (Time.time < _currentState.NextAttackTime) return;
 
 			if (TryFindClosestEnemy(out EnemyState closestEnemy))
 			{
 				_enemiesController.AttackEnemy(closestEnemy, _weaponsService.CurrentWeapon.Damage);
 				_currentState = new HeroState(_currentState.Position, _currentState.Health, Time.time);
+				StartAttackCooldown();
+				OnAttackPerformed?.Invoke(closestEnemy.Position);
 			}
+		}
+
+		private void StartAttackCooldown()
+		{
+			float cooldown = _weaponsService?.CurrentWeapon?.Cooldown ?? 0f;
+			_currentState = new HeroState(_currentState.Position, _currentState.Health, _currentState.LastAttackTime, Time.time + cooldown);
+			OnStateChanged?.Invoke(_currentState);
+			OnAttackCooldownStarted?.Invoke(cooldown);
+		}
+
+		private void OnJoystickStateChanged(JoystickState state)
+		{
+			if (state.IsActive)
+			{
+				_wasMoving = true;
+				return;
+			}
+
+			if (!_wasMoving) return;
+
+			_wasMoving = false;
+			StartAttackCooldown();
 		}
 
 		private bool TryFindClosestEnemy(out EnemyState closestEnemy)
 		{
 			closestEnemy = default;
-			if (_weaponsService.CurrentWeapon == null) return false;
+			if (_weaponsService.CurrentWeapon == null || _enemiesController?.Enemies == null) return false;
 			float closestDistance = _weaponsService.CurrentWeapon.Range;
 			bool found = false;
 

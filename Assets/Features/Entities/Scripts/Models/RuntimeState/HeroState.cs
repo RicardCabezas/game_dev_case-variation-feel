@@ -7,14 +7,16 @@ namespace Game.GamePlay.Heroes
 		public Vector3 Position { get; }
 		public int Health { get; }
 		public float LastAttackTime { get; }
+		public float NextAttackTime { get; }
 
 		public bool IsDead => Health <= 0;
 
-		public HeroState(Vector3 position, int health, float lastAttackTime)
+		public HeroState(Vector3 position, int health, float lastAttackTime, float nextAttackTime = 0f)
 		{
 			Position = position;
 			Health = health;
 			LastAttackTime = lastAttackTime;
+			NextAttackTime = nextAttackTime;
 		}
 	}
 }
