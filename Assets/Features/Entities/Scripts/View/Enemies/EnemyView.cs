@@ -64,7 +64,6 @@ namespace Game.GamePlay.Enemies
 			_hitFlashEndTime = Time.time + hitFlashDuration;
 			_isHitFlashActive = true;
 		}
-
 		private void UpdateHitFlash()
 		{
 			if (!_isHitFlashActive || Time.time < _hitFlashEndTime || meshRenderer == null) return;
