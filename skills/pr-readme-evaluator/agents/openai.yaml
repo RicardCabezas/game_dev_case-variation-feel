@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR README Evaluator"
+  short_description: "Review merged PRs and update README after clarification"
+  default_prompt: "Review unevaluated merged PRs, ask clarification questions, then update README."
