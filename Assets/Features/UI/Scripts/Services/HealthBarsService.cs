@@ -8,18 +8,19 @@ using UnityEngine;
 
 namespace Game.UI
 {
+	/// <summary>Composes and updates the canvas health-bar controller.</summary>
 	public sealed class HealthBarsService : IService
 	{
 		private CancellationTokenSource _cancellationTokenSource;
 
-		public HealthBarsController Controller { get; private set; }
+		public HealthBarsCanvasController Controller { get; private set; }
 
 		public Type[] GetDependencies() => new[] { typeof(EntitiesService) };
 
 		public UniTask<bool> Initialize()
 		{
 			EntitiesService entitiesService = ServicesLocator.Instance.GetService<EntitiesService>();
-			Controller = new HealthBarsController(
+			Controller = new HealthBarsCanvasController(
 				entitiesService.HeroController,
 				entitiesService.EnemiesController,
 				EnemiesConfig.Instance.MaxEnemies);

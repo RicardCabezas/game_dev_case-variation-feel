@@ -5,7 +5,8 @@ using UnityEngine;
 
 namespace Game.UI
 {
-	public sealed class HealthBarsView : MonoBehaviour
+	/// <summary>Canvas-level view that maps health-bar state to reusable screen-space bar instances.</summary>
+	public sealed class HealthBarsCanvasView : MonoBehaviour
 	{
 		[SerializeField] private HealthBarView healthBarPrefab;
 		[SerializeField] private RectTransform canvasRect;
@@ -14,7 +15,7 @@ namespace Game.UI
 		[SerializeField] private Vector3 enemyWorldOffset = new Vector3(0f, 1.5f, 0f);
 		[SerializeField] private float fillSmoothDuration = 0.15f;
 
-		private HealthBarsController _controller;
+		private HealthBarsCanvasController _controller;
 		private Dictionary<HealthBarId, HealthBarView> _views;
 
 		private void Start()

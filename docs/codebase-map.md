@@ -17,6 +17,8 @@ ServicesLocator (persistent scene component)
     EnemiesController
   AutoAttackIndicatorService
     AutoAttackIndicatorController
+  HealthBarsService
+    HealthBarsCanvasController
 
 Controllers/services own state and decisions
   typed events
@@ -36,6 +38,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `HeroController` | Hero position, health, death, movement/attack mode, target selection, cooldown | Hero, game-over, and indicator presentation |
 | `EnemiesController` | Enemy identities, spawn, chase, attacks, damage, removal | Enemy container/view presentation |
 | `AutoAttackIndicatorController` | Cooldown-indicator visibility and duration | Auto-attack indicator view |
+| `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
 
 Controllers and UI controllers are plain C# and must not depend on views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Views own subscriptions and remove them in `OnDestroy`.
 
@@ -59,7 +62,8 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | --- | --- | --- |
 | `ServicesLocator.OnAllServicesInitialized` | All services initialized; no payload | Scene and prefab views resolve services |
 | `JoystickInputService.OnStateChanged` | Complete joystick state changes | Joystick view, hero controller, indicator controller |
-| `HeroController.OnStateChanged` | Position, health, cooldown timing, or restart state changes | Hero view, game-over overlay |
+| `HeroController.OnStateChanged` | Position, health, cooldown timing, or restart state changes | Hero view, game-over overlay, health-bar controller |
+| `HeroController.OnHeroHit` | Accepted incoming damage; `HeroHitResult` with damage, remaining health, and lethality | Hero hit-flash view |
 | `HeroController.OnAttackPerformed` | Confirmed hero strike; target world position | Hero view faces target and triggers attack |
 | `HeroController.OnAttackCooldownStarted` | Cooldown starts; duration seconds | Auto-attack indicator controller |
 | `EnemiesController.OnEnemySpawned` | Enemy added; initial `EnemyState` | Enemy container instantiates prefab |
@@ -69,6 +73,9 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `EnemiesController.OnEnemyRemoved` | Enemy removed; enemy ID | Enemy container destroys view |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
 | `AutoAttackIndicatorController.OnStateChanged` | Complete indicator state replacement | Indicator view starts or hides fill |
+| `HealthBarsCanvasController.OnHealthBarAdded` | New hero state or first visible enemy state; `HealthBarState` | Health-bars canvas view creates or reuses bar |
+| `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
+| `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
 
 `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and nonlethal `Damage` presentation. Hero damage/death and Bee death animation states have no current runtime driver.
 

@@ -6,7 +6,8 @@ using UnityEngine;
 
 namespace Game.UI
 {
-	public sealed class HealthBarsController
+	/// <summary>Plain C# owner of hero and enemy health-bar state and timeout transitions.</summary>
+	public sealed class HealthBarsCanvasController
 	{
 		public const float DefaultEnemyVisibilityDuration = 2f;
 
@@ -25,7 +26,7 @@ namespace Game.UI
 		public event Action<HealthBarState> OnHealthBarChanged;
 		public event Action<HealthBarId> OnHealthBarRemoved;
 
-		public HealthBarsController(HeroController heroController, EnemiesController enemiesController, int maxEnemies, float enemyVisibilityDuration = DefaultEnemyVisibilityDuration)
+		public HealthBarsCanvasController(HeroController heroController, EnemiesController enemiesController, int maxEnemies, float enemyVisibilityDuration = DefaultEnemyVisibilityDuration)
 		{
 			_heroController = heroController;
 			_enemiesController = enemiesController;
