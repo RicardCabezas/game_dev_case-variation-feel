@@ -6,6 +6,12 @@ I treated this project as an inherited live codebase: understand its existing lo
 
 The project uses Unity `2022.3.62f2`. The assignment allowed a maximum of eight hours and emphasized game feel, frame-budget awareness, measured optimization, and code quality.
 
+## Documentation
+
+Open generated documentation at [GitHub Pages](https://ricardcabezas.github.io/game_dev_case-variation-feel/).
+
+Documentation updates after changes reach `main`.
+
 ## Approach and Rationale
 
 I first analyzed the project structure, feedback gaps, and likely performance-sensitive paths. I also played the game and reviewed Android Development Builds while collecting profiler data. This produced a codebase map, performance investigation, game-feel opportunity analysis, architecture guideline, and prioritized implementation proposal.

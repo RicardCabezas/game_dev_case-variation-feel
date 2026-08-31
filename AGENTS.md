@@ -28,7 +28,7 @@ These instructions apply to the entire repository.
 
 ## Architecture
 
-- Follow [`docs/analysis/04-architecture-guideline.md`](docs/analysis/04-architecture-guideline.md) for all design and implementation decisions.
+- Follow [`docs/codebase-map.md`](docs/codebase-map.md) for current ownership, lifecycle, and presentation boundaries.
 - Preserve existing architectural boundaries unless the task explicitly requests an architecture change.
 - Keep authoritative gameplay state and decisions in plain C# services/controllers.
 - Apply the same separation to UI: UI controllers remain plain C#, expose state through typed events, and do not reference views or Unity presentation components.
