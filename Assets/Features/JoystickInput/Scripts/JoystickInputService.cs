@@ -6,15 +6,19 @@ using UnityEngine;
 
 namespace Game.JoystickInput
 {
+	/// <summary>Polls touch or mouse input and owns virtual joystick runtime state.</summary>
 	public class JoystickInputService : IService
 	{
+		/// <summary>Raised only when joystick state changes; payload is complete replacement state.</summary>
 		public event Action<JoystickState> OnStateChanged;
 
 		private JoystickState _currentState;
 		private CancellationTokenSource _cancellationTokenSource;
 
+		/// <summary>Gets current input snapshot.</summary>
 		public JoystickState CurrentState => _currentState;
 
+		/// <inheritdoc/>
 		public UniTask<bool> Initialize()
 		{
 			_currentState = JoystickState.Inactive;
@@ -25,6 +29,7 @@ namespace Game.JoystickInput
 			return UniTask.FromResult(true);
 		}
 
+		/// <inheritdoc/>
 		public Type[] GetDependencies()
 		{
 			return Array.Empty<Type>();
@@ -89,6 +94,7 @@ namespace Game.JoystickInput
 			OnStateChanged?.Invoke(_currentState);
 		}
 
+		/// <inheritdoc/>
 		public UniTask Reset()
 		{
 			_cancellationTokenSource?.Cancel();

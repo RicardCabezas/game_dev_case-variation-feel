@@ -2,10 +2,14 @@ using UnityEngine;
 
 namespace Core.ScriptableObjectSingleton
 {
+	/// <summary>Provides lazily loaded access to one Resources-backed configuration asset.</summary>
+	/// <typeparam name="T">Concrete ScriptableObject type loaded from a Resources asset with matching type name.</typeparam>
 	public abstract class ScriptableObjectSingleton<T> : ScriptableObject where T : ScriptableObject
 	{
 		private static T _instance;
 
+		/// <summary>Gets cached configuration instance, or loads it from Resources on first access.</summary>
+		/// <remarks>Logs an error and returns <see langword="null"/> when required asset is absent.</remarks>
 		public static T Instance
 		{
 			get

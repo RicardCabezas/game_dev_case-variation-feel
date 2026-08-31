@@ -6,6 +6,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
+	/// <summary>Unity presentation for hero transform, movement and attack animation, and weapon visual.</summary>
+	/// <remarks>Mirrors controller and service events. Owns instantiated weapon view but no gameplay state.</remarks>
 	public class HeroView : MonoBehaviour
 	{
 		private static readonly int SpeedHash = Animator.StringToHash("Speed");

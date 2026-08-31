@@ -8,6 +8,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
+	/// <summary>Owns hero state, joystick movement, target selection, automatic attacks, health, and restart transitions.</summary>
+	/// <remarks>Plain C# controller. Presentation reads typed events and never changes this authoritative state.</remarks>
 	public class HeroController
 	{
 		// Services
@@ -21,13 +23,22 @@ namespace Game.GamePlay.Heroes
 		private bool _wasMoving;
 
 		// Public State
+		/// <summary>Gets current authoritative hero state snapshot.</summary>
 		public HeroState CurrentState => _currentState;
 
 		// Events
+		/// <summary>Raised after hero position, health, or attack timing state changes.</summary>
 		public event Action<HeroState> OnStateChanged;
+		/// <summary>Raised when hero attacks a target; payload is target world position for presentation.</summary>
 		public event Action<Vector3> OnAttackPerformed;
+		/// <summary>Raised when auto-attack cooldown starts; payload is cooldown duration in seconds.</summary>
 		public event Action<float> OnAttackCooldownStarted;
 
+		/// <summary>Sets dependencies, creates initial hero state, and starts per-frame control loop.</summary>
+		/// <param name="enemiesController">Enemy state owner queried for nearest target and sent damage.</param>
+		/// <param name="joystickInputService">Input state source controlling movement mode.</param>
+		/// <param name="weaponsService">Weapon owner supplying range, damage, and cooldown.</param>
+		/// <returns>Completed successful initialization task.</returns>
 		public UniTask<bool> Initialize(EnemiesController enemiesController, JoystickInputService joystickInputService, WeaponsService weaponsService)
 		{
 			_enemiesController = enemiesController;
@@ -44,6 +55,9 @@ namespace Game.GamePlay.Heroes
 			return UniTask.FromResult(true);
 		}
 
+		/// <summary>Applies incoming enemy damage unless hero is already dead.</summary>
+		/// <param name="damage">Damage subtracted from health; health clamps at zero.</param>
+		/// <remarks>Emits <see cref="OnStateChanged"/> after health changes, including lethal transition.</remarks>
 		public void TakeHit(int damage)
 		{
 			if (_currentState.IsDead) return;
@@ -59,6 +73,8 @@ namespace Game.GamePlay.Heroes
 			}
 		}
 
+		/// <summary>Restores hero to origin, configured initial health, and available attack timing.</summary>
+		/// <remarks>Caller clears enemies separately; emits <see cref="OnStateChanged"/>.</remarks>
 		public void Restart()
 		{
 			_currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f);
@@ -66,6 +82,7 @@ namespace Game.GamePlay.Heroes
 			OnStateChanged?.Invoke(_currentState);
 		}
 
+		/// <summary>Unsubscribes input and cancels owned update loop.</summary>
 		public UniTask Reset()
 		{
 			if (_joystickInputService != null)

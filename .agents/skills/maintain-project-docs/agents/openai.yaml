@@ -1,0 +1,6 @@
+interface:
+  display_name: "Maintain Project Docs"
+  short_description: "Update verified Unity code and docs"
+  default_prompt: "Use $maintain-project-docs to update documentation for this Unity change."
+policy:
+  allow_implicit_invocation: true

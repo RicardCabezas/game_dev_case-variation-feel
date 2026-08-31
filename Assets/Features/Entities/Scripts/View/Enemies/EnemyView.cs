@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
+	/// <summary>Unity presentation for one enemy: position, facing, animation, and nonlethal hit flash.</summary>
+	/// <remarks>Container owns this object's lifetime. Public methods are event-driven presentation commands.</remarks>
 	public class EnemyView : MonoBehaviour
 	{
 		private static readonly int IsMovingHash = Animator.StringToHash(Constants.Animator.Bee.IsMoving);
@@ -48,12 +50,15 @@ namespace Game.GamePlay.Enemies
 			}
 		}
 
+		/// <summary>Moves presentation to authoritative enemy world position and marks movement animation.</summary>
+		/// <param name="position">World-space position from <see cref="EnemyState"/>.</param>
 		public void SetPosition(Vector3 position)
 		{
 			transform.position = position;
 			animator?.SetBool(IsMovingHash, true);
 		}
 
+		/// <summary>Plays nonlethal damage animation and temporary material flash.</summary>
 		public void PlayDamage()
 		{
 			animator?.SetTrigger(DamageHash);
@@ -66,6 +71,7 @@ namespace Game.GamePlay.Enemies
 			_isHitFlashActive = true;
 		}
 
+		/// <summary>Plays attack presentation for controller-reported enemy attack.</summary>
 		public void PlayAttack()
 		{
 			if (animator == null) return;

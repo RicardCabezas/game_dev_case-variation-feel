@@ -3,7 +3,7 @@ PROJECT_BRIEF          = "Unity gameplay architecture and API reference"
 OUTPUT_DIRECTORY       = documentation-build
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
-USE_MDFILE_AS_MAINPAGE = docs/analysis/01-codebase-map.md
+USE_MDFILE_AS_MAINPAGE = docs/index.md
 
 INPUT                  = Assets/Core/ScriptableObjectSingleton/Scripts \
                          Assets/Core/ServicesManager/Scripts \
@@ -14,6 +14,8 @@ INPUT                  = Assets/Core/ScriptableObjectSingleton/Scripts \
                          Assets/Features/UI/Scripts \
                          Assets/Features/Weapons/Scripts \
                          Assets/Features/World/Scripts \
+                         docs/index.md \
+                         docs/codebase-map.md \
                          docs/analysis
 RECURSIVE              = YES
 FILE_PATTERNS          = *.cs *.md

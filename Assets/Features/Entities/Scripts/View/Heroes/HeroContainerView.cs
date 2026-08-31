@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
+	/// <summary>Presentation container that instantiates hero and assigns world camera follow target.</summary>
+	/// <remarks>Owns no hero gameplay decisions.</remarks>
 	public class HeroContainerView : MonoBehaviour
 	{
 		private void Start()

@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace Game.Biomes
 {
+	/// <summary>Presentation container that instantiates configured default biome after service startup.</summary>
+	/// <remarks>Owns instantiated biome hierarchy; contains no gameplay state or decisions.</remarks>
 	public class BiomeContainerView : MonoBehaviour
 	{
 		private void Start()
