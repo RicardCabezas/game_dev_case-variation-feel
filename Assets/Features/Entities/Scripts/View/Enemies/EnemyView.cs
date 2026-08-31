@@ -5,7 +5,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
-	/// <summary>Unity presentation for one enemy: position, facing, animation, and nonlethal hit flash.</summary>
+	[RequireComponent(typeof(HitFlashView))]
+	/// <summary>Unity presentation for one enemy: position, facing, animation, and hit flash.</summary>
 	/// <remarks>Container owns this object's lifetime. Public methods are event-driven presentation commands.</remarks>
 	public class EnemyView : MonoBehaviour
 	{
@@ -14,19 +15,13 @@ namespace Game.GamePlay.Enemies
 		private static readonly int AttackHash = Animator.StringToHash(Constants.Animator.Bee.Attack);
 
 		[SerializeField] private Animator animator;
-		[SerializeField] private HitFlashView hitFlash;
-		[SerializeField] private Color hitFlashColor = new Color(1f, 0.2f, 0.2f, 1f);
-		[SerializeField] private float hitFlashDuration = 0.1f;
+		[SerializeField] private HitFlashView hitFlashView;
 		[SerializeField] private float rotationSpeed = 10f;
 
 		private HeroController _heroController;
-		private HitFlashView _hitFlashView;
-
 		private void Awake()
 		{
-			_hitFlashView = hitFlash != null ? hitFlash : GetComponent<HitFlashView>();
-			if (_hitFlashView == null) _hitFlashView = gameObject.AddComponent<HitFlashView>();
-			_hitFlashView.Configure(hitFlashColor, hitFlashDuration);
+			if (hitFlashView == null) hitFlashView = GetComponent<HitFlashView>();
 		}
 
 		private void Start()
@@ -61,11 +56,11 @@ namespace Game.GamePlay.Enemies
 			animator?.SetBool(IsMovingHash, true);
 		}
 
-		/// <summary>Plays nonlethal damage animation and temporary material flash.</summary>
+		/// <summary>Plays damage animation and temporary material flash for any accepted hit.</summary>
 		public void PlayDamage()
 		{
 			animator?.SetTrigger(DamageHash);
-			_hitFlashView?.Play();
+			hitFlashView?.Play();
 		}
 
 		/// <summary>Plays attack presentation for controller-reported enemy attack.</summary>

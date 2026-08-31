@@ -68,7 +68,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `HeroController.OnAttackCooldownStarted` | Cooldown starts; duration seconds | Auto-attack indicator controller |
 | `EnemiesController.OnEnemySpawned` | Enemy added; initial `EnemyState` | Enemy container instantiates prefab |
 | `EnemiesController.OnEnemyPositionChanged` | Chase movement; replacement `EnemyState` | Enemy view position and move animation |
-| `EnemiesController.OnEnemyHit` | Before removal/replacement; `EnemyHitResult` | Nonlethal Bee damage animation and flash |
+| `EnemiesController.OnEnemyHit` | Before removal/replacement; `EnemyHitResult` | Bee damage animation and hit flash, including lethal hits |
 | `EnemiesController.OnEnemyAttackPerformed` | After hero damage; enemy ID | Enemy view attack animation acknowledgement |
 | `EnemiesController.OnEnemyRemoved` | Enemy removed; enemy ID | Enemy container destroys view |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
@@ -77,7 +77,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
 | `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
 
-`HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and nonlethal `Damage` presentation. Hero damage/death and Bee death animation states have no current runtime driver.
+`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and `Damage` presentation. Hero damage/death and Bee death animation states have no current runtime driver.
 
 ## Configuration and content selection
 

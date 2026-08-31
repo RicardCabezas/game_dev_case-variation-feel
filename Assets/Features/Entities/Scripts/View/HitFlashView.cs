@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Game.GamePlay.Entities
 {
+	/// <summary>Reusable timestamp-based material flash for one entity hierarchy.</summary>
 	public sealed class HitFlashView : MonoBehaviour
 	{
 		private static readonly int BaseColorHash = Shader.PropertyToID("_BaseColor");
@@ -20,12 +21,6 @@ namespace Game.GamePlay.Entities
 			{
 				renderers = GetComponentsInChildren<Renderer>(true);
 			}
-		}
-
-		public void Configure(Color color, float duration)
-		{
-			hitFlashColor = color;
-			hitFlashDuration = duration;
 		}
 
 		public void Play()
