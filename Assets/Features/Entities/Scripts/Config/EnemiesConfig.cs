@@ -21,6 +21,11 @@ namespace Game.GamePlay.Enemies
 		private int maxEnemies = 20;
 
 		[SerializeField]
+		[Min(0f)]
+		[Tooltip("Minimum horizontal distance in units between enemies")]
+		private float enemySpacing = 1f;
+
+		[SerializeField]
 		[Tooltip("List of all available enemies in the game")]
 		private List<EnemyConfig> enemies;
 
@@ -30,6 +35,8 @@ namespace Game.GamePlay.Enemies
 		public float SpawnRadius => spawnRadius;
 		/// <summary>Gets maximum concurrently tracked enemies.</summary>
 		public int MaxEnemies => maxEnemies;
+		/// <summary>Gets minimum horizontal world-unit distance between enemies.</summary>
+		public float EnemySpacing => enemySpacing;
 		/// <summary>Gets configured enemy catalog; current spawn path selects index zero.</summary>
 		public IReadOnlyList<EnemyConfig> Enemies => enemies;
 

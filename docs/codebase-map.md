@@ -46,7 +46,7 @@ Known lifecycle exception: `EntitiesService.Reset()` currently completes without
 1. `JoystickInputService` emits `OnStateChanged` only when `JoystickState` changes. Input uses the first touch, otherwise mouse input. Drag displacement clamps to `JoystickInputConfig.MaxRadius` screen pixels and becomes a normalized movement vector.
 2. `HeroController` reads that state every Update. Active input moves hero at `HeroConfig.MoveSpeed` world units per second and emits `OnStateChanged` with replacement `HeroState`.
 3. Inactive input lets hero find nearest enemy strictly inside current weapon range. A confirmed attack calls `EnemiesController.AttackEnemy`, records timing, emits `OnStateChanged`, emits `OnAttackCooldownStarted` with cooldown seconds, then emits `OnAttackPerformed` with target world position.
-4. `EnemiesController` spawns while hero is alive, below `EnemiesConfig.MaxEnemies`, and after `SpawnInterval`. It places each enemy at `SpawnRadius` around hero and currently selects `Enemies[0]`.
+4. `EnemiesController` spawns while hero is alive, below `EnemiesConfig.MaxEnemies`, and after `SpawnInterval`. It tries up to 8 positions at `SpawnRadius` around hero that are at least `EnemySpacing` horizontal world units from active enemies; unsuccessful attempts skip spawn. It currently selects `Enemies[0]`.
 5. Each active enemy chases hero outside its configured attack range, replacing state and emitting `OnEnemyPositionChanged`. Inside range, elapsed cooldown causes `HeroController.TakeHit`, then `OnEnemyAttackPerformed` with attacking enemy identity.
 6. Enemy damage emits `OnEnemyHit` with ID, damage, remaining health, and lethality before state replacement or removal. Lethal hits then emit `OnEnemyRemoved`; the container immediately destroys the matching view.
 7. Hero health clamps at zero. Dead hero stops hero attacks/movement and enemy spawning/updates. `GameOverOverlayView` displays the restart action, which clears enemies then calls `HeroController.Restart`.
@@ -76,7 +76,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 
 - `ScriptableObjectSingleton<T>` lazily loads a Resources asset named after its concrete type and logs an error if absent.
 - `HeroConfig` supplies prefab, initial health, and movement speed.
-- `EnemiesConfig` supplies spawn interval/radius/cap and enemy catalog. Runtime currently selects catalog index zero.
+- `EnemiesConfig` supplies spawn interval/radius/cap, minimum horizontal enemy spacing, and enemy catalog. Runtime currently selects catalog index zero.
 - `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab. `WeaponsService` starts with catalog index zero; `SwitchWeapon` uses `WeaponsConfig.GetWeaponById`.
 - `WorldConfig` and `BiomeConfig` supply prefabs instantiated by their owning service/container.
 

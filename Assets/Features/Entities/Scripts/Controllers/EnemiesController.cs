@@ -11,6 +11,8 @@ namespace Game.GamePlay.Enemies
 	/// <remarks>Plain C# controller; views consume its events but do not own enemy decisions or state.</remarks>
 	public class EnemiesController
 	{
+		private const int SeparationPasses = 2;
+
 		private HeroController _heroController;
 
 		// Events
@@ -27,6 +29,8 @@ namespace Game.GamePlay.Enemies
 
 		// State
 		private Dictionary<int, EnemyState> _enemies;
+		private List<int> _enemyIdsBuffer;
+		private List<EnemyState> _updatedEnemiesBuffer;
 		private CancellationTokenSource _cancellationTokenSource;
 		private int _nextEnemyId;
 
@@ -41,6 +45,8 @@ namespace Game.GamePlay.Enemies
 			_heroController = heroController;
 
 			_enemies = new Dictionary<int, EnemyState>();
+			_enemyIdsBuffer = new List<int>(EnemiesConfig.Instance.MaxEnemies);
+			_updatedEnemiesBuffer = new List<EnemyState>(EnemiesConfig.Instance.MaxEnemies);
 			_nextEnemyId = 0;
 			_cancellationTokenSource = new CancellationTokenSource();
 
@@ -56,6 +62,8 @@ namespace Game.GamePlay.Enemies
 			_cancellationTokenSource?.Cancel();
 			_cancellationTokenSource?.Dispose();
 			_enemies.Clear();
+			_enemyIdsBuffer.Clear();
+			_updatedEnemiesBuffer.Clear();
 
 			return UniTask.CompletedTask;
 		}
@@ -63,10 +71,10 @@ namespace Game.GamePlay.Enemies
 		/// <summary>Removes every tracked enemy and raises <see cref="OnEnemyRemoved"/> for each.</summary>
 		public void ClearAllEnemies()
 		{
-			List<int> enemyIds = new List<int>(_enemies.Keys);
-			foreach (int enemyId in enemyIds)
+			CollectEnemyIds();
+			for (int i = 0; i < _enemyIdsBuffer.Count; i++)
 			{
-				RemoveEnemy(enemyId);
+				RemoveEnemy(_enemyIdsBuffer[i]);
 			}
 		}
 
@@ -153,44 +161,110 @@ namespace Game.GamePlay.Enemies
 					continue;
 				}
 
-				List<int> enemiesToUpdate = new List<int>(_enemies.Keys);
-				for (int i = 0; i < enemiesToUpdate.Count; i++)
-				{
-					int enemyId = enemiesToUpdate[i];
-					if (!_enemies.TryGetValue(enemyId, out EnemyState enemy)) continue;
-
-					UpdateEnemy(enemy);
-				}
+				UpdateEnemies();
 
 				await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
 			}
 		}
 
-		private void UpdateEnemy(EnemyState enemy)
+		private void UpdateEnemies()
 		{
 			Vector3 heroPosition = _heroController.CurrentState.Position;
-			float distanceToHero = Vector3.Distance(enemy.Position, heroPosition);
+			CollectEnemyIds();
+			_updatedEnemiesBuffer.Clear();
 
-			if (distanceToHero > enemy.Config.AttackRange)
+			for (int i = 0; i < _enemyIdsBuffer.Count; i++)
 			{
-				Vector3 direction = (heroPosition - enemy.Position).normalized;
-				Vector3 newPosition = enemy.Position + direction * (enemy.Config.Speed * Time.deltaTime);
-
-				EnemyState updatedEnemy = new EnemyState(enemy.Id, newPosition, enemy.Health, enemy.Config, enemy.LastAttackTime);
-				_enemies[enemy.Id] = updatedEnemy;
-				OnEnemyPositionChanged?.Invoke(updatedEnemy);
-			}
-			else
-			{
-				if (Time.time - enemy.LastAttackTime >= enemy.Config.AttackCooldown)
+				if (_enemies.TryGetValue(_enemyIdsBuffer[i], out EnemyState enemy))
 				{
-					_heroController.TakeHit(enemy.Config.AttackDamage);
-					OnEnemyAttackPerformed?.Invoke(enemy.Id);
+					_updatedEnemiesBuffer.Add(UpdateEnemy(enemy, heroPosition));
+				}
+			}
 
-					EnemyState updatedEnemy = new EnemyState(enemy.Id, enemy.Position, enemy.Health, enemy.Config, Time.time);
-					_enemies[enemy.Id] = updatedEnemy;
+			ResolveEnemySpacing();
+
+			for (int i = 0; i < _updatedEnemiesBuffer.Count; i++)
+			{
+				EnemyState updatedEnemy = _updatedEnemiesBuffer[i];
+				if (!_enemies.TryGetValue(updatedEnemy.Id, out EnemyState previousEnemy)) continue;
+
+				_enemies[updatedEnemy.Id] = updatedEnemy;
+				if (updatedEnemy.Position != previousEnemy.Position)
+				{
+					OnEnemyPositionChanged?.Invoke(updatedEnemy);
 				}
 			}
 		}
+
+		private EnemyState UpdateEnemy(EnemyState enemy, Vector3 heroPosition)
+		{
+			float attackRange = enemy.Config.AttackRange;
+			if ((heroPosition - enemy.Position).sqrMagnitude > attackRange * attackRange)
+			{
+				Vector3 direction = heroPosition - enemy.Position;
+				direction.y = 0f;
+				direction.Normalize();
+				Vector3 newPosition = enemy.Position + direction * (enemy.Config.Speed * Time.deltaTime);
+				return new EnemyState(enemy.Id, newPosition, enemy.Health, enemy.Config, enemy.LastAttackTime);
+			}
+
+			if (Time.time - enemy.LastAttackTime < enemy.Config.AttackCooldown) return enemy;
+
+			_heroController.TakeHit(enemy.Config.AttackDamage);
+			OnEnemyAttackPerformed?.Invoke(enemy.Id);
+			return new EnemyState(enemy.Id, enemy.Position, enemy.Health, enemy.Config, Time.time);
+		}
+
+		private void ResolveEnemySpacing()
+		{
+			float spacing = EnemiesConfig.Instance.EnemySpacing;
+			if (spacing <= 0f) return;
+
+			float spacingSqr = spacing * spacing;
+			for (int pass = 0; pass < SeparationPasses; pass++)
+			{
+				for (int firstIndex = 0; firstIndex < _updatedEnemiesBuffer.Count - 1; firstIndex++)
+				{
+					for (int secondIndex = firstIndex + 1; secondIndex < _updatedEnemiesBuffer.Count; secondIndex++)
+					{
+						SeparatePair(firstIndex, secondIndex, spacing, spacingSqr);
+					}
+				}
+			}
+		}
+
+		private void SeparatePair(int firstIndex, int secondIndex, float spacing, float spacingSqr)
+		{
+			EnemyState firstEnemy = _updatedEnemiesBuffer[firstIndex];
+			EnemyState secondEnemy = _updatedEnemiesBuffer[secondIndex];
+			Vector3 difference = firstEnemy.Position - secondEnemy.Position;
+			difference.y = 0f;
+			float distanceSqr = difference.sqrMagnitude;
+			if (distanceSqr >= spacingSqr) return;
+
+			float distance = Mathf.Sqrt(distanceSqr);
+			Vector3 direction = distance > 0f ? difference / distance : Vector3.right;
+			Vector3 correction = direction * ((spacing - distance) * 0.5f);
+
+			_updatedEnemiesBuffer[firstIndex] = new EnemyState(firstEnemy.Id, firstEnemy.Position + correction, firstEnemy.Health, firstEnemy.Config, firstEnemy.LastAttackTime);
+			_updatedEnemiesBuffer[secondIndex] = new EnemyState(secondEnemy.Id, secondEnemy.Position - correction, secondEnemy.Health, secondEnemy.Config, secondEnemy.LastAttackTime);
+		}
+
+		private void CollectEnemyIds()
+		{
+			_enemyIdsBuffer.Clear();
+			foreach (int enemyId in _enemies.Keys)
+			{
+				_enemyIdsBuffer.Add(enemyId);
+			}
+		}
+
+		private static float GetHorizontalSqrDistance(Vector3 firstPosition, Vector3 secondPosition)
+		{
+			float x = firstPosition.x - secondPosition.x;
+			float z = firstPosition.z - secondPosition.z;
+			return x * x + z * z;
+		}
+
 	}
 }

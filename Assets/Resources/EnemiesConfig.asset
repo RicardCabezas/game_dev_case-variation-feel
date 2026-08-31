@@ -15,6 +15,7 @@ MonoBehaviour:
   spawnInterval: 2
   spawnRadius: 10
   maxEnemies: 20
+  enemySpacing: 1
   enemies:
   - {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
   - {fileID: 11400000, guid: 72575589acde143858765603cd63d900, type: 2}
