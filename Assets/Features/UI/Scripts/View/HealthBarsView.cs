@@ -56,7 +56,11 @@ namespace Game.UI
 				return;
 			}
 
-			if (healthBarPrefab == null) return;
+			if (healthBarPrefab == null)
+			{
+				Debug.LogError("healthBarPrefab is null");
+				return;
+			}
 			HealthBarView view = Instantiate(healthBarPrefab, transform);
 			Vector3 worldOffset = state.Id.Owner == HealthBarOwner.Hero ? heroWorldOffset : enemyWorldOffset;
 			view.Initialize(canvasRect, worldCamera, worldOffset, fillSmoothDuration);
