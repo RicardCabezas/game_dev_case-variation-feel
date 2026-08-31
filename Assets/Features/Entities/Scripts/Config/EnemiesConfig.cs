@@ -5,6 +5,7 @@ using UnityEngine;
 namespace Game.GamePlay.Enemies
 {
 	[CreateAssetMenu(fileName = "EnemiesConfig", menuName = "Game/EnemiesConfig")]
+	/// <summary>Resources-backed spawn limits and enemy content catalog.</summary>
 	public class EnemiesConfig : ScriptableObjectSingleton<EnemiesConfig>
 	{
 		[SerializeField]
@@ -23,13 +24,20 @@ namespace Game.GamePlay.Enemies
 		[Tooltip("List of all available enemies in the game")]
 		private List<EnemyConfig> enemies;
 
+		/// <summary>Gets seconds between spawn-loop attempts.</summary>
 		public float SpawnInterval => spawnInterval;
+		/// <summary>Gets world-unit radius used to place spawned enemies around hero.</summary>
 		public float SpawnRadius => spawnRadius;
+		/// <summary>Gets maximum concurrently tracked enemies.</summary>
 		public int MaxEnemies => maxEnemies;
+		/// <summary>Gets configured enemy catalog; current spawn path selects index zero.</summary>
 		public IReadOnlyList<EnemyConfig> Enemies => enemies;
 
 		private Dictionary<string, EnemyConfig> _enemiesMap;
 
+		/// <summary>Finds configured enemy by content identifier.</summary>
+		/// <param name="enemyId">Identifier from <see cref="EnemyConfig.Id"/>.</param>
+		/// <returns>Matching configuration, or <see langword="null"/> when no match exists.</returns>
 		public EnemyConfig GetEnemyById(string enemyId)
 		{
 			if (_enemiesMap == null)

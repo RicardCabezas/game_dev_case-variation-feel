@@ -6,8 +6,11 @@ using UnityEngine;
 
 namespace Core.ServicesManager
 {
+	/// <summary>Persistent Unity composition root that discovers, orders, initializes, and resets <see cref="IService"/> implementations.</summary>
+	/// <remarks>Services are reflection-created and exposed only after their dependencies initialize. Views subscribe to <see cref="OnAllServicesInitialized"/> before resolving services.</remarks>
 	public class ServicesLocator : MonoBehaviour
 	{
+		/// <summary>Gets persistent locator instance created by scene composition.</summary>
 		public static ServicesLocator Instance { get; private set; }
 
 		private Dictionary<Type, IService> _services;
@@ -15,6 +18,8 @@ namespace Core.ServicesManager
 		private bool _isInitialized;
 
 		private event Action OnAllServicesInitializedInternal;
+		/// <summary>Raised once all discovered services initialize successfully.</summary>
+		/// <remarks>Subscribers added after completion are invoked immediately; payload is absent because consumers resolve required services from this locator.</remarks>
 		public event Action OnAllServicesInitialized
 		{
 			add
@@ -143,6 +148,9 @@ namespace Core.ServicesManager
 			orderedList.Add(service);
 		}
 
+		/// <summary>Gets initialized service of requested concrete type.</summary>
+		/// <typeparam name="T">Concrete <see cref="IService"/> implementation registered during discovery.</typeparam>
+		/// <returns>Matching service, or <see langword="null"/> after logging an error when unavailable.</returns>
 		public T GetService<T>() where T : class, IService
 		{
 			Type serviceType = typeof(T);

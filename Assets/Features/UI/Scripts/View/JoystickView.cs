@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace Game.JoystickInput
 {
+	/// <summary>Unity UI view that mirrors virtual joystick input and hides it while hero is dead.</summary>
+	/// <remarks>Uses screen-pixel center and normalized movement from <see cref="JoystickState"/>; owns no input state.</remarks>
 	public class JoystickView : MonoBehaviour
 	{
 		[SerializeField] private RectTransform joystickOuterStick;

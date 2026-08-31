@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 namespace Game.UI
 {
+	/// <summary>Unity UI view that displays and fills automatic-attack cooldown indicator.</summary>
+	/// <remarks>Consumes <see cref="AutoAttackIndicatorController"/> state; does not decide gameplay or UI state.</remarks>
 	public class AutoAttackIndicatorView : MonoBehaviour
 	{
 		[SerializeField] private Image fillImage;
@@ -33,6 +35,8 @@ namespace Game.UI
 			_isFilling = fillImage.fillAmount < 1f;
 		}
 
+		/// <summary>Shows indicator and begins a clamped fill over supplied duration.</summary>
+		/// <param name="duration">Cooldown duration in seconds; zero or negative fills immediately.</param>
 		public void StartFilling(float duration)
 		{
 			_fillDuration = Mathf.Max(0f, duration);
@@ -50,6 +54,7 @@ namespace Game.UI
 			}
 		}
 
+		/// <summary>Hides indicator and clears local fill progress.</summary>
 		public void Hide()
 		{
 			_isFilling = false;

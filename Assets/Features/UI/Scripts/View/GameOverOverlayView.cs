@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 namespace Game.UI
 {
+	/// <summary>Unity UI view that presents hero death and requests restart through controllers.</summary>
+	/// <remarks>Listens to authoritative hero state; restart clears enemy presentation via controller events before restoring hero.</remarks>
 	public class GameOverOverlayView : MonoBehaviour
 	{
 		[SerializeField] private Button restartButton;

@@ -7,15 +7,22 @@ using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
+	/// <summary>Owns runtime enemy state, spawning, chase movement, attacks, damage, and removal.</summary>
+	/// <remarks>Plain C# controller; views consume its events but do not own enemy decisions or state.</remarks>
 	public class EnemiesController
 	{
 		private HeroController _heroController;
 
 		// Events
+		/// <summary>Raised after enemy is added; payload is its initial state.</summary>
 		public event Action<EnemyState> OnEnemySpawned;
+		/// <summary>Raised after enemy leaves controller state; payload is removed runtime identity.</summary>
 		public event Action<int> OnEnemyRemoved;
+		/// <summary>Raised when chase movement changes enemy position; payload contains replacement state.</summary>
 		public event Action<EnemyState> OnEnemyPositionChanged;
+		/// <summary>Raised for every damage attempt before lethal removal; views use nonlethal payloads for hit feedback.</summary>
 		public event Action<EnemyHitResult> OnEnemyHit;
+		/// <summary>Raised after enemy damage is applied to hero; payload is attacking enemy identity.</summary>
 		public event Action<int> OnEnemyAttackPerformed;
 
 		// State
@@ -23,8 +30,12 @@ namespace Game.GamePlay.Enemies
 		private CancellationTokenSource _cancellationTokenSource;
 		private int _nextEnemyId;
 
+		/// <summary>Gets authoritative enemies indexed by runtime identity.</summary>
 		public IReadOnlyDictionary<int, EnemyState> Enemies => _enemies;
 
+		/// <summary>Allocates runtime state and starts spawn and update loops.</summary>
+		/// <param name="heroController">Hero state owner used for spawning, targeting, and receiving attacks.</param>
+		/// <returns>Completed successful initialization task.</returns>
 		public UniTask<bool> Initialize(HeroController heroController)
 		{
 			_heroController = heroController;
@@ -39,6 +50,7 @@ namespace Game.GamePlay.Enemies
 			return UniTask.FromResult(true);
 		}
 
+		/// <summary>Cancels loops, disposes their token source, and clears tracked enemies.</summary>
 		public UniTask Reset()
 		{
 			_cancellationTokenSource?.Cancel();
@@ -48,6 +60,7 @@ namespace Game.GamePlay.Enemies
 			return UniTask.CompletedTask;
 		}
 
+		/// <summary>Removes every tracked enemy and raises <see cref="OnEnemyRemoved"/> for each.</summary>
 		public void ClearAllEnemies()
 		{
 			List<int> enemyIds = new List<int>(_enemies.Keys);
@@ -57,6 +70,8 @@ namespace Game.GamePlay.Enemies
 			}
 		}
 
+		/// <summary>Removes one enemy if present.</summary>
+		/// <param name="enemyId">Runtime identity to remove.</param>
 		public void RemoveEnemy(int enemyId)
 		{
 			if (_enemies.Remove(enemyId))
@@ -65,6 +80,10 @@ namespace Game.GamePlay.Enemies
 			}
 		}
 
+		/// <summary>Applies hero damage to currently tracked enemy and emits hit/removal transitions.</summary>
+		/// <param name="enemyState">Target snapshot; its identity selects current authoritative enemy.</param>
+		/// <param name="damage">Damage subtracted from current health; positive values are expected.</param>
+		/// <remarks>Unknown targets are ignored. Lethal hits emit <see cref="OnEnemyHit"/> before <see cref="OnEnemyRemoved"/>.</remarks>
 		public void AttackEnemy(EnemyState enemyState, int damage)
 		{
 			if (!_enemies.TryGetValue(enemyState.Id, out EnemyState currentEnemy)) return;

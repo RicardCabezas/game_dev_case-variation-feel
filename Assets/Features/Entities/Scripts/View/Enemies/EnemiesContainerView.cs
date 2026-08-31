@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
+	/// <summary>Presentation owner mapping runtime enemy identities to instantiated enemy views.</summary>
+	/// <remarks>Subscribes after service initialization and mirrors controller events; never owns enemy gameplay state.</remarks>
 	public class EnemiesContainerView : MonoBehaviour
 	{
 		private EnemiesController _enemiesController;
