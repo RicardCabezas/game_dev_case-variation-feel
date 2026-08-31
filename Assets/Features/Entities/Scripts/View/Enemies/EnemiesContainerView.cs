@@ -54,8 +54,6 @@ namespace Game.GamePlay.Enemies
 
 		private void OnEnemyHit(EnemyHitResult hitResult)
 		{
-			if (hitResult.IsLethal) return;
-
 			if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
 			{
 				enemyView.PlayDamage();

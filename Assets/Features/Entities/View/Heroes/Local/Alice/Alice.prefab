@@ -490,6 +490,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3206923099687242365}
   - component: {fileID: 8466526908961427062}
+  - component: {fileID: 900000000000000002}
   m_Layer: 0
   m_Name: Alice
   m_TagString: Untagged
@@ -526,8 +527,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 4278100186079492270}
+  hitFlashView: {fileID: 900000000000000002}
   rotationSpeed: 10
   weaponSlot: {fileID: 1993995369825730728}
+--- !u!114 &900000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3206923099687242354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fa0f29a335b432290989d1d6055e033, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  renderers:
+  - {fileID: 1042267208002864592}
+  hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  hitFlashDuration: 0.1
 --- !u!1 &3512741108777884559
 GameObject:
   m_ObjectHideFlags: 0

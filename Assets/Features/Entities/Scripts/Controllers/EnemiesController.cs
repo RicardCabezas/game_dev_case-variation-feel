@@ -99,12 +99,10 @@ namespace Game.GamePlay.Enemies
 			int newHealth = currentEnemy.Health - damage;
 			bool isLethal = newHealth <= 0;
 
-			Debug.Log($"Attacked enemy id°{currentEnemy.Id}. Health : {currentEnemy.Health} -> {newHealth}");
 			OnEnemyHit?.Invoke(new EnemyHitResult(currentEnemy.Id, damage, newHealth, isLethal));
 
 			if (isLethal)
 			{
-				Debug.Log($"Enemy id°{currentEnemy.Id} is dead. Removing it.");
 				RemoveEnemy(currentEnemy.Id);
 			}
 			else

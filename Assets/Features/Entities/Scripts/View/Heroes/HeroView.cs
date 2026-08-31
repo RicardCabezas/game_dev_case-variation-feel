@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
+	[RequireComponent(typeof(HitFlashView))]
 	/// <summary>Unity presentation for hero transform, movement and attack animation, and weapon visual.</summary>
 	/// <remarks>Mirrors controller and service events. Owns instantiated weapon view but no gameplay state.</remarks>
 	public class HeroView : MonoBehaviour
@@ -14,6 +15,7 @@ namespace Game.GamePlay.Heroes
 		private static readonly int AttackHash = Animator.StringToHash("Attack");
 
 		[SerializeField] private Animator animator;
+		[SerializeField] private HitFlashView hitFlashView;
 		[SerializeField] private float rotationSpeed = 10f;
 		[SerializeField] private Transform weaponSlot;
 
@@ -22,6 +24,10 @@ namespace Game.GamePlay.Heroes
 		private WeaponsService _weaponsService;
 		private Vector2 _currentMovementInput;
 		private WeaponView _currentWeaponView;
+		private void Awake()
+		{
+			if (hitFlashView == null) hitFlashView = GetComponent<HitFlashView>();
+		}
 
 		private void Start()
 		{
@@ -36,6 +42,7 @@ namespace Game.GamePlay.Heroes
 
 			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
 			_heroController.OnStateChanged += OnHeroStateChanged;
+			_heroController.OnHeroHit += OnHeroHit;
 			_heroController.OnAttackPerformed += OnAttackPerformed;
 			_weaponsService.OnWeaponChanged += OnWeaponChanged;
 
@@ -54,6 +61,7 @@ namespace Game.GamePlay.Heroes
 			if (_heroController != null)
 			{
 				_heroController.OnStateChanged -= OnHeroStateChanged;
+				_heroController.OnHeroHit -= OnHeroHit;
 				_heroController.OnAttackPerformed -= OnAttackPerformed;
 			}
 			if (_weaponsService != null)
@@ -75,6 +83,11 @@ namespace Game.GamePlay.Heroes
 		private void OnHeroStateChanged(HeroState heroState)
 		{
 			transform.position = heroState.Position;
+		}
+
+		private void OnHeroHit(HeroHitResult hitResult)
+		{
+			hitFlashView?.Play();
 		}
 
 		private void OnAttackPerformed(Vector3 targetPosition)

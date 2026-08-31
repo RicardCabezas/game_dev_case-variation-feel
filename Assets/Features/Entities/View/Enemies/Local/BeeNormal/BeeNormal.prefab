@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 297763066410921876}
   - component: {fileID: -4038593928516999298}
+  - component: {fileID: 900000000000000001}
   m_Layer: 0
   m_Name: BeeNormal
   m_TagString: Untagged
@@ -46,7 +47,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 6926839794853975167}
-  meshRenderer: {fileID: 6926839794849704639}
+  hitFlashView: {fileID: 900000000000000001}
+  rotationSpeed: 10
+--- !u!114 &900000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1358921057130329688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fa0f29a335b432290989d1d6055e033, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  renderers:
+  - {fileID: 6926839794849704639}
   hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}
   hitFlashDuration: 0.1
 --- !u!1 &6926839794863368101

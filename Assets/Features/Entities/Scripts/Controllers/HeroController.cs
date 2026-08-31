@@ -31,6 +31,8 @@ namespace Game.GamePlay.Heroes
 		public event Action<HeroState> OnStateChanged;
 		/// <summary>Raised when hero attacks a target; payload is target world position for presentation.</summary>
 		public event Action<Vector3> OnAttackPerformed;
+		/// <summary>Raised after incoming damage updates hero state; payload contains damage, remaining health, and lethality.</summary>
+		public event Action<HeroHitResult> OnHeroHit;
 		/// <summary>Raised when auto-attack cooldown starts; payload is cooldown duration in seconds.</summary>
 		public event Action<float> OnAttackCooldownStarted;
 
@@ -57,20 +59,15 @@ namespace Game.GamePlay.Heroes
 
 		/// <summary>Applies incoming enemy damage unless hero is already dead.</summary>
 		/// <param name="damage">Damage subtracted from health; health clamps at zero.</param>
-		/// <remarks>Emits <see cref="OnStateChanged"/> after health changes, including lethal transition.</remarks>
+		/// <remarks>Emits <see cref="OnStateChanged"/> then <see cref="OnHeroHit"/> after health changes, including lethal transition.</remarks>
 		public void TakeHit(int damage)
 		{
 			if (_currentState.IsDead) return;
 
 			int newHealth = Mathf.Max(0, _currentState.Health - damage);
-			Debug.Log($"Hero is taking a hit. Health : {_currentState.Health} -> {newHealth}");
 			_currentState = new HeroState(_currentState.Position, newHealth, _currentState.LastAttackTime, _currentState.NextAttackTime);
 			OnStateChanged?.Invoke(_currentState);
-
-			if (_currentState.IsDead)
-			{
-				Debug.Log("Hero is dead!");
-			}
+			OnHeroHit?.Invoke(new HeroHitResult(damage, newHealth, _currentState.IsDead));
 		}
 
 		/// <summary>Restores hero to origin, configured initial health, and available attack timing.</summary>

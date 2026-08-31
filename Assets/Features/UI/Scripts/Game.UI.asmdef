@@ -2,6 +2,7 @@
     "name": "Game.UI",
     "rootNamespace": "Game.UI",
     "references": [
+        "GUID:6d8d31c569ff49f792685c49d5709837",
         "GUID:894935dc78c247aba5acdc0e86f7619b",
         "GUID:2ba0b2bd275444a9aeb8fc997cf656fa",
         "GUID:0555d359d9c2448e8fcd38237492f38e",
