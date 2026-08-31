@@ -1,0 +1,60 @@
+PROJECT_NAME           = "Game Feel Home Assignment"
+PROJECT_BRIEF          = "Unity gameplay architecture and API reference"
+OUTPUT_DIRECTORY       = documentation-build
+CREATE_SUBDIRS         = NO
+OUTPUT_LANGUAGE        = English
+USE_MDFILE_AS_MAINPAGE = docs/analysis/01-codebase-map.md
+
+INPUT                  = Assets/Core/ScriptableObjectSingleton/Scripts \
+                         Assets/Core/ServicesManager/Scripts \
+                         Assets/Features/Biomes/Scripts \
+                         Assets/Features/Entities/Scripts \
+                         Assets/Features/JoystickInput/Scripts \
+                         Assets/Features/Settings/Scripts \
+                         Assets/Features/UI/Scripts \
+                         Assets/Features/Weapons/Scripts \
+                         Assets/Features/World/Scripts \
+                         docs/analysis
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cs *.md
+EXCLUDE_PATTERNS       = */Library/* */Packages/* */obj/* */bin/* */Assets/Plugins/* */Assets/AssetStoreTools* */documentation-build/*
+EXCLUDE_SYMLINKS       = YES
+
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = NO
+EXTRACT_ANON_NSPACES   = NO
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+GENERATE_MAN           = NO
+GENERATE_RTF           = NO
+
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT        = svg
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+UML_LOOK               = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DIRECTORY_GRAPH        = YES
+DOT_TRANSPARENT        = YES
+
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO
+QUIET                  = NO

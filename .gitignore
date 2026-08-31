@@ -6,6 +6,7 @@
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
+/documentation-build/
 /Assets/AssetStoreTools*
 compilation_status.txt
 .DS_Store
