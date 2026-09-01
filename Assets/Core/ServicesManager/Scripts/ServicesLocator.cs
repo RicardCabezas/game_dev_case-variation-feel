@@ -6,177 +6,224 @@ using UnityEngine;
 
 namespace Core.ServicesManager
 {
-	/// <summary>Persistent Unity composition root that discovers, orders, initializes, and resets <see cref="IService"/> implementations.</summary>
-	/// <remarks>Services are reflection-created and exposed only after their dependencies initialize. Views subscribe to <see cref="OnAllServicesInitialized"/> before resolving services.</remarks>
-	public class ServicesLocator : MonoBehaviour
-	{
-		/// <summary>Gets persistent locator instance created by scene composition.</summary>
-		public static ServicesLocator Instance { get; private set; }
+    /// <summary>
+    /// Persistent Unity composition root that discovers, orders, initializes, and resets
+    /// <see cref="IService"/> implementations.
+    /// </summary>
+    /// <remarks>
+    /// Services are reflection-created and exposed only after their dependencies initialize.
+    /// Views subscribe to <see cref="OnAllServicesInitialized"/> before resolving services.
+    /// </remarks>
+    public class ServicesLocator : MonoBehaviour
+    {
+        /// <summary>Gets persistent locator instance created by scene composition.</summary>
+        public static ServicesLocator Instance { get; private set; }
 
-		private Dictionary<Type, IService> _services;
-		private List<IService> _orderedServices;
-		private bool _isInitialized;
+        private Dictionary<Type, IService> _services;
+        private List<IService> _orderedServices;
+        private bool _isInitialized;
 
-		private event Action OnAllServicesInitializedInternal;
-		/// <summary>Raised once all discovered services initialize successfully.</summary>
-		/// <remarks>Subscribers added after completion are invoked immediately; payload is absent because consumers resolve required services from this locator.</remarks>
-		public event Action OnAllServicesInitialized
-		{
-			add
-			{
-				if(_isInitialized) value?.Invoke();
-				else OnAllServicesInitializedInternal += value;
-			}
-			remove => OnAllServicesInitializedInternal -= value;
-		}
+        private event Action OnAllServicesInitializedInternal;
 
-		private void Awake()
-		{
-			if (Instance != null && Instance != this)
-			{
-				Destroy(gameObject);
-				return;
-			}
+        /// <summary>Raised once all discovered services initialize successfully.</summary>
+        /// <remarks>
+        /// Subscribers added after completion are invoked immediately; payload is absent because
+        /// consumers resolve required services from this locator.
+        /// </remarks>
+        public event Action OnAllServicesInitialized
+        {
+            add
+            {
 
-			Instance = this;
-			DontDestroyOnLoad(gameObject);
+                if (_isInitialized)
+                {
+                    value?.Invoke();
+                }
+                else
+                {
+                    OnAllServicesInitializedInternal += value;
+                }
+            }
+            remove => OnAllServicesInitializedInternal -= value;
+        }
 
-			DiscoverAndInitializeServices().Forget();
-		}
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
 
-		private async UniTask DiscoverAndInitializeServices()
-		{
-			_isInitialized = false;
-			List<Type> serviceTypes = DiscoverServices();
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
 
-			_services = new Dictionary<Type, IService>();
-			foreach (Type serviceType in serviceTypes)
-			{
-				IService serviceInstance = (IService)Activator.CreateInstance(serviceType);
-				_services[serviceType] = serviceInstance;
-			}
+            DiscoverAndInitializeServices().Forget();
+        }
 
-			_orderedServices = OrderServicesByDependencies();
+        private async UniTask DiscoverAndInitializeServices()
+        {
+            _isInitialized = false;
+            List<Type> serviceTypes = DiscoverServices();
 
-			foreach (IService orderedService in _orderedServices)
-			{
-				if (await orderedService.Initialize()) continue;
+            _services = new Dictionary<Type, IService>();
 
-				Debug.LogError($"Service {orderedService.GetType().Name} could not be initialized. Fix the error and restart the game.");
-				return;
-			}
+            foreach (Type serviceType in serviceTypes)
+            {
+                IService serviceInstance = (IService)Activator.CreateInstance(serviceType);
+                _services[serviceType] = serviceInstance;
+            }
 
-			_isInitialized = true;
-			OnAllServicesInitializedInternal?.Invoke();
-		}
+            _orderedServices = OrderServicesByDependencies();
 
-		private List<Type> DiscoverServices()
-		{
-			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-			List<Type> serviceTypes = new List<Type>();
+            foreach (IService orderedService in _orderedServices)
+            {
 
-			foreach (Assembly assembly in assemblies)
-			{
-				Type[] types = assembly.GetTypes();
-				foreach (Type type in types)
-				{
-					if (typeof(IService).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
-					{
-						serviceTypes.Add(type);
-					}
-				}
-			}
+                if (await orderedService.Initialize())
+                {
+                    continue;
+                }
 
-			return serviceTypes;
-		}
+                Debug.LogError(
+                    $"Service {orderedService.GetType().Name} could not be initialized. "
+                        + "Fix the error and restart the game."
+                );
+                return;
+            }
 
-		private List<IService> OrderServicesByDependencies()
-		{
-			List<IService> orderedList = new List<IService>();
-			HashSet<Type> visited = new HashSet<Type>();
-			HashSet<Type> visiting = new HashSet<Type>();
+            _isInitialized = true;
+            OnAllServicesInitializedInternal?.Invoke();
+        }
 
-			foreach (KeyValuePair<Type, IService> kvp in _services)
-			{
-				if (!visited.Contains(kvp.Key))
-				{
-					VisitService(kvp.Value, orderedList, visited, visiting);
-				}
-			}
+        private List<Type> DiscoverServices()
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            List<Type> serviceTypes = new List<Type>();
 
-			return orderedList;
-		}
+            foreach (Assembly assembly in assemblies)
+            {
+                Type[] types = assembly.GetTypes();
 
-		private void VisitService(IService service, List<IService> orderedList, HashSet<Type> visited, HashSet<Type> visiting)
-		{
-			Type serviceType = service.GetType();
+                foreach (Type type in types)
+                {
 
-			if (visiting.Contains(serviceType))
-			{
-				Debug.LogError($"Circular dependency detected for service: {serviceType.Name}");
-				return;
-			}
+                    if (
+                        typeof(IService).IsAssignableFrom(type)
+                        && !type.IsInterface
+                        && !type.IsAbstract
+                    )
+                    {
+                        serviceTypes.Add(type);
+                    }
+                }
+            }
 
-			if (visited.Contains(serviceType))
-			{
-				return;
-			}
+            return serviceTypes;
+        }
 
-			visiting.Add(serviceType);
+        private List<IService> OrderServicesByDependencies()
+        {
+            List<IService> orderedList = new List<IService>();
+            HashSet<Type> visited = new HashSet<Type>();
+            HashSet<Type> visiting = new HashSet<Type>();
 
-			Type[] dependencies = service.GetDependencies();
-			if (dependencies != null)
-			{
-				foreach (Type dependencyType in dependencies)
-				{
-					if (_services.TryGetValue(dependencyType, out IService dependencyService))
-					{
-						if (!visited.Contains(dependencyType))
-						{
-							VisitService(dependencyService, orderedList, visited, visiting);
-						}
-					}
-					else
-					{
-						Debug.LogWarning($"Service {serviceType.Name} depends on {dependencyType.Name}, but it was not found.");
-					}
-				}
-			}
+            foreach (KeyValuePair<Type, IService> kvp in _services)
+            {
 
-			visiting.Remove(serviceType);
-			visited.Add(serviceType);
-			orderedList.Add(service);
-		}
+                if (!visited.Contains(kvp.Key))
+                {
+                    VisitService(kvp.Value, orderedList, visited, visiting);
+                }
+            }
 
-		/// <summary>Gets initialized service of requested concrete type.</summary>
-		/// <typeparam name="T">Concrete <see cref="IService"/> implementation registered during discovery.</typeparam>
-		/// <returns>Matching service, or <see langword="null"/> after logging an error when unavailable.</returns>
-		public T GetService<T>() where T : class, IService
-		{
-			Type serviceType = typeof(T);
-			if (_services.TryGetValue(serviceType, out IService service))
-			{
-				return service as T;
-			}
+            return orderedList;
+        }
 
-			Debug.LogError($"Service of type {serviceType.Name} not found.");
-			return null;
-		}
+        private void VisitService(
+            IService service,
+            List<IService> orderedList,
+            HashSet<Type> visited,
+            HashSet<Type> visiting
+        )
+        {
+            Type serviceType = service.GetType();
 
-		private void OnDestroy() => ResetServices().Forget();
-		private async UniTaskVoid ResetServices()
-		{
-			for (int i = _orderedServices.Count - 1; i >= 0; i--)
-			{
-				try
-				{
-					await _orderedServices[i].Reset();
-				}
-				catch (Exception e)
-				{
-					Debug.LogException(e);
-				}
-			}
-		}
-	}
+            if (visiting.Contains(serviceType))
+            {
+                Debug.LogError($"Circular dependency detected for service: {serviceType.Name}");
+                return;
+            }
+
+            if (visited.Contains(serviceType))
+            {
+                return;
+            }
+
+            visiting.Add(serviceType);
+
+            Type[] dependencies = service.GetDependencies();
+
+            if (dependencies != null)
+            {
+
+                foreach (Type dependencyType in dependencies)
+                {
+
+                    if (_services.TryGetValue(dependencyType, out IService dependencyService))
+                    {
+
+                        if (!visited.Contains(dependencyType))
+                        {
+                            VisitService(dependencyService, orderedList, visited, visiting);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning(
+                            $"Service {serviceType.Name} depends on {dependencyType.Name}, but it was not found."
+                        );
+                    }
+                }
+            }
+
+            visiting.Remove(serviceType);
+            visited.Add(serviceType);
+            orderedList.Add(service);
+        }
+
+        /// <summary>Gets initialized service of requested concrete type.</summary>
+        /// <typeparam name="T">Concrete <see cref="IService"/> implementation registered during discovery.</typeparam>
+        /// <returns>Matching service, or <see langword="null"/> after logging an error when unavailable.</returns>
+        public T GetService<T>()
+            where T : class, IService
+        {
+            Type serviceType = typeof(T);
+
+            if (_services.TryGetValue(serviceType, out IService service))
+            {
+                return service as T;
+            }
+
+            Debug.LogError($"Service of type {serviceType.Name} not found.");
+            return null;
+        }
+
+        private void OnDestroy() => ResetServices().Forget();
+
+        private async UniTaskVoid ResetServices()
+        {
+
+            for (int i = _orderedServices.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    await _orderedServices[i].Reset();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
+        }
+    }
 }

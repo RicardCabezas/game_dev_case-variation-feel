@@ -1,83 +1,118 @@
 using Core.ServicesManager;
+using Game.Entities;
 using Game.GamePlay.Entities;
 using Game.GamePlay.Heroes;
 using UnityEngine;
 
 namespace Game.JoystickInput
 {
-	/// <summary>Unity UI view that mirrors virtual joystick input and hides it while hero is dead.</summary>
-	/// <remarks>Uses screen-pixel center and normalized movement from <see cref="JoystickState"/>; owns no input state.</remarks>
-	public class JoystickView : MonoBehaviour
-	{
-		[SerializeField] private RectTransform joystickOuterStick;
-		[SerializeField] private RectTransform joystickInnerStick;
+    /// <summary>Unity UI view that mirrors virtual joystick input and hides it while hero is dead.</summary>
+    /// <remarks>
+    /// Uses screen-pixel center and normalized movement from <see cref="JoystickState"/>; owns no
+    /// input state.
+    /// </remarks>
+    public class JoystickView : MonoBehaviour
+    {
+        [SerializeField]
+        private RectTransform joystickOuterStick;
 
-		private float _containerRadius;
-		private HeroController _heroController;
-		private bool _isHeroDead;
+        [SerializeField]
+        private RectTransform joystickInnerStick;
 
-		private void Awake()
-		{
-			if (joystickOuterStick != null)
-			{
-				_containerRadius = joystickOuterStick.sizeDelta.x * 0.5f;
-			}
+        private float _containerRadius;
+        private IHeroPresentationSource _heroPresentation;
+        private JoystickInputService _joystickInputService;
+        private bool _isHeroDead;
 
-			joystickOuterStick.gameObject.SetActive(false);
-		}
+        private void Awake()
+        {
+            if (joystickOuterStick != null)
+            {
+                _containerRadius = joystickOuterStick.sizeDelta.x * 0.5f;
+            }
 
-		private void Start()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
-		}
+            joystickOuterStick.gameObject.SetActive(false);
+        }
 
-		private void OnServicesInitialized()
-		{
-			JoystickInputService joystickInputService = ServicesLocator.Instance.GetService<JoystickInputService>();
-			joystickInputService.OnStateChanged += OnJoystickStateChanged;
+        private void Start()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
+        }
 
-			_heroController = ServicesLocator.Instance.GetService<EntitiesService>().HeroController;
-			_heroController.OnStateChanged += OnHeroStateChanged;
+        private void OnServicesInitialized()
+        {
+            _joystickInputService = ServicesLocator.Instance.GetService<JoystickInputService>();
+            _joystickInputService.OnStateChanged += OnJoystickStateChanged;
 
-			OnJoystickStateChanged(joystickInputService.CurrentState);
-			OnHeroStateChanged(_heroController.CurrentState);
-		}
+            _heroPresentation = ServicesLocator
+                .Instance.GetService<EntitiesService>()
+                .HeroPresentation;
+            _heroPresentation.OnHeroHit += OnHeroHit;
+            _heroPresentation.OnRestarted += OnRestarted;
 
-		private void OnDestroy()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
-			JoystickInputService joystickInputService = ServicesLocator.Instance.GetService<JoystickInputService>();
-			if(joystickInputService != null) joystickInputService.OnStateChanged -= OnJoystickStateChanged;
-			if (_heroController != null) _heroController.OnStateChanged -= OnHeroStateChanged;
-		}
+            OnJoystickStateChanged(_joystickInputService.CurrentState);
+            OnHeroStateChanged(_heroPresentation.CurrentState);
+        }
 
-		private void OnHeroStateChanged(HeroState heroState)
-		{
-			_isHeroDead = heroState.IsDead;
-			if (_isHeroDead)
-			{
-				joystickOuterStick.gameObject.SetActive(false);
-			}
-		}
+        private void OnDestroy()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
 
-		private void OnJoystickStateChanged(JoystickState state)
-		{
-			if (_isHeroDead)
-			{
-				joystickOuterStick.gameObject.SetActive(false);
-				return;
-			}
+            if (_joystickInputService != null)
+            {
+                _joystickInputService.OnStateChanged -= OnJoystickStateChanged;
+            }
 
-			joystickOuterStick.gameObject.SetActive(state.IsActive);
-			if (state.IsActive) UpdateJoystickVisuals(state);
-		}
+            if (_heroPresentation != null)
+            {
+                _heroPresentation.OnHeroHit -= OnHeroHit;
+                _heroPresentation.OnRestarted -= OnRestarted;
+            }
+        }
 
-		private void UpdateJoystickVisuals(JoystickState state)
-		{
-			joystickOuterStick.position = state.JoystickCenter;
+        private void OnHeroStateChanged(HeroState heroState)
+        {
+            _isHeroDead = heroState.IsDead;
 
-			Vector2 innerStickOffset = state.MovementVector * _containerRadius;
-			joystickInnerStick.anchoredPosition = innerStickOffset;
-		}
-	}
+            if (_isHeroDead)
+            {
+                joystickOuterStick.gameObject.SetActive(false);
+            }
+        }
+
+        private void OnHeroHit(HeroHitResult hit)
+        {
+            if (hit.IsLethal)
+            {
+                _isHeroDead = true;
+                joystickOuterStick.gameObject.SetActive(false);
+            }
+        }
+
+        private void OnRestarted(HeroState state) => OnHeroStateChanged(state);
+
+        private void OnJoystickStateChanged(JoystickState state)
+        {
+            if (_isHeroDead)
+            {
+                joystickOuterStick.gameObject.SetActive(false);
+                return;
+            }
+
+            joystickOuterStick.gameObject.SetActive(state.IsActive);
+
+            if (state.IsActive)
+            {
+                UpdateJoystickVisuals(state);
+            }
+        }
+
+        private void UpdateJoystickVisuals(JoystickState state)
+        {
+            joystickOuterStick.position = state.JoystickCenter;
+
+            Vector2 innerStickOffset = state.MovementVector * _containerRadius;
+            joystickInnerStick.anchoredPosition = innerStickOffset;
+        }
+    }
 }

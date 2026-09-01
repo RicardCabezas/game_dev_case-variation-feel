@@ -6,168 +6,202 @@ using UnityEngine;
 
 namespace Game.UI
 {
-	/// <summary>Plain C# owner of hero and enemy health-bar state and timeout transitions.</summary>
-	public sealed class HealthBarsCanvasController
-	{
-		public const float DefaultEnemyVisibilityDuration = 2f;
+    /// <summary>Owns health-bar presentation state from self-sufficient payloads and supplied time.</summary>
+    internal sealed class HealthBarsCanvasController : IHealthBarsPresentationSource
+    {
+        private readonly Dictionary<HealthBarId, HealthBarState> _states =
+            new Dictionary<HealthBarId, HealthBarState>();
+        private readonly Dictionary<int, float> _hideTimes = new Dictionary<int, float>();
+        private readonly float _duration;
+        /// <summary>Gets current health-bar states by owner and ID.</summary>
+        public IReadOnlyDictionary<HealthBarId, HealthBarState> CurrentStates => _states;
+        /// <summary>Raised when a bar first becomes tracked.</summary>
+        public event Action<HealthBarState> OnHealthBarAdded;
+        /// <summary>Raised after a tracked bar changes.</summary>
+        public event Action<HealthBarState> OnHealthBarChanged;
+        /// <summary>Raised after a bar is removed.</summary>
+        public event Action<HealthBarId> OnHealthBarRemoved;
 
-		private readonly HeroController _heroController;
-		private readonly EnemiesController _enemiesController;
-		private readonly float _enemyVisibilityDuration;
-		private readonly Dictionary<HealthBarId, HealthBarState> _states;
-		private readonly Dictionary<int, float> _enemyHideTimes;
-		private readonly List<int> _visibleEnemyIds;
-		private bool _isInitialized;
-		private float _currentTime;
+        /// <summary>Creates controller with enemy-bar visibility duration.</summary>
+        /// <param name="duration">Seconds an enemy bar remains visible after a hit.</param>
+        public HealthBarsCanvasController(float duration = 2f)
+        {
+            _duration = Mathf.Max(0f, duration);
+        }
 
-		public IReadOnlyDictionary<HealthBarId, HealthBarState> CurrentStates => _states;
+        /// <summary>Replaces hero bar state.</summary>
+        public void ApplyHeroState(HeroState hero)
+        {
+            HealthBarState state = new HealthBarState(
+                new HealthBarId(HealthBarOwner.Hero, 0),
+                hero.Health,
+                HeroConfig.Instance.InitialHealth,
+                hero.Position,
+                true
+            );
 
-		public event Action<HealthBarState> OnHealthBarAdded;
-		public event Action<HealthBarState> OnHealthBarChanged;
-		public event Action<HealthBarId> OnHealthBarRemoved;
+            if (_states.ContainsKey(state.Id))
+            {
+                _states[state.Id] = state;
+                OnHealthBarChanged?.Invoke(state);
+            }
+            else
+            {
+                _states.Add(state.Id, state);
+                OnHealthBarAdded?.Invoke(state);
+            }
+        }
 
-		public HealthBarsCanvasController(HeroController heroController, EnemiesController enemiesController, int maxEnemies, float enemyVisibilityDuration = DefaultEnemyVisibilityDuration)
-		{
-			_heroController = heroController;
-			_enemiesController = enemiesController;
-			_enemyVisibilityDuration = Mathf.Max(0f, enemyVisibilityDuration);
-			int capacity = Mathf.Max(1, maxEnemies + 1);
-			_states = new Dictionary<HealthBarId, HealthBarState>(capacity);
-			_enemyHideTimes = new Dictionary<int, float>(Mathf.Max(1, maxEnemies));
-			_visibleEnemyIds = new List<int>(Mathf.Max(1, maxEnemies));
-		}
+        /// <summary>Updates hero bar world position.</summary>
+        public void ApplyHeroPosition(Vector3 position)
+        {
+            HealthBarId id = new HealthBarId(HealthBarOwner.Hero, 0);
 
-		public void Initialize(float initialTime)
-		{
-			if (_isInitialized) return;
+            if (!_states.TryGetValue(id, out HealthBarState old))
+            {
+                return;
+            }
 
-			_currentTime = initialTime;
-			_isInitialized = true;
-			_heroController.OnStateChanged += OnHeroStateChanged;
-			_enemiesController.OnEnemyHit += OnEnemyHit;
-			_enemiesController.OnEnemyPositionChanged += OnEnemyPositionChanged;
-			_enemiesController.OnEnemyRemoved += OnEnemyRemoved;
+            HealthBarState state = new HealthBarState(
+                id,
+                old.Health,
+                old.MaxHealth,
+                position,
+                old.IsVisible
+            );
+            _states[id] = state;
+            OnHealthBarChanged?.Invoke(state);
+        }
 
-			HealthBarId heroId = new HealthBarId(HealthBarOwner.Hero, 0);
-			HealthBarState heroState = CreateHeroState(_heroController.CurrentState, true);
-			_states.Add(heroId, heroState);
-			OnHealthBarAdded?.Invoke(heroState);
-		}
+        /// <summary>Applies accepted hero hit state.</summary>
+        public void ApplyHeroHit(HeroHitResult hit)
+        {
+            HealthBarId id = new HealthBarId(HealthBarOwner.Hero, 0);
+            HealthBarState state = new HealthBarState(
+                id,
+                hit.RemainingHealth,
+                HeroConfig.Instance.InitialHealth,
+                hit.Position,
+                true
+            );
 
-		public void Tick(float currentTime)
-		{
-			_currentTime = currentTime;
-			for (int i = _visibleEnemyIds.Count - 1; i >= 0; i--)
-			{
-				int enemyId = _visibleEnemyIds[i];
-				if (!_enemyHideTimes.TryGetValue(enemyId, out float hideTime) || hideTime > currentTime) continue;
+            if (_states.ContainsKey(id))
+            {
+                _states[id] = state;
+                OnHealthBarChanged?.Invoke(state);
+            }
+            else
+            {
+                _states.Add(id, state);
+                OnHealthBarAdded?.Invoke(state);
+            }
+        }
 
-				_visibleEnemyIds.RemoveAt(i);
-				if (!_states.TryGetValue(new HealthBarId(HealthBarOwner.Enemy, enemyId), out HealthBarState state) || !state.IsVisible) continue;
+        /// <summary>Applies nonlethal enemy hit and refreshes visibility timeout.</summary>
+        public void ApplyEnemyHit(EnemyHitResult hit, float time)
+        {
+            if (hit.IsLethal)
+            {
+                return;
+            }
 
-				HealthBarState hiddenState = new HealthBarState(state.Id, state.Health, state.MaxHealth, state.WorldPosition, false);
-				_states[state.Id] = hiddenState;
-				OnHealthBarChanged?.Invoke(hiddenState);
-			}
-		}
+            HealthBarId id = new HealthBarId(HealthBarOwner.Enemy, hit.EnemyId);
+            HealthBarState state = new HealthBarState(
+                id,
+                hit.RemainingHealth,
+                hit.MaximumHealth,
+                hit.Position,
+                true
+            );
+            bool add = !_states.ContainsKey(id);
+            _states[id] = state;
+            _hideTimes[hit.EnemyId] = time + _duration;
 
-		public void Reset()
-		{
-			if (_isInitialized)
-			{
-				_heroController.OnStateChanged -= OnHeroStateChanged;
-				_enemiesController.OnEnemyHit -= OnEnemyHit;
-				_enemiesController.OnEnemyPositionChanged -= OnEnemyPositionChanged;
-				_enemiesController.OnEnemyRemoved -= OnEnemyRemoved;
-			}
+            if (add)
+            {
+                OnHealthBarAdded?.Invoke(state);
+            }
+            else
+            {
+                OnHealthBarChanged?.Invoke(state);
+            }
+        }
 
-			_isInitialized = false;
-			_states.Clear();
-			_enemyHideTimes.Clear();
-			_visibleEnemyIds.Clear();
-		}
+        /// <summary>Updates tracked enemy bar position.</summary>
+        public void ApplyEnemyPosition(EnemyState enemy)
+        {
+            HealthBarId id = new HealthBarId(HealthBarOwner.Enemy, enemy.Id);
 
-		private void OnHeroStateChanged(HeroState heroState)
-		{
-			HealthBarId heroId = new HealthBarId(HealthBarOwner.Hero, 0);
-			HealthBarState newState = CreateHeroState(heroState, true);
-			if (!_states.TryGetValue(heroId, out HealthBarState oldState))
-			{
-				_states.Add(heroId, newState);
-				OnHealthBarAdded?.Invoke(newState);
-				return;
-			}
+            if (!_states.TryGetValue(id, out HealthBarState old))
+            {
+                return;
+            }
 
-			if (oldState.Matches(newState)) return;
-			_states[heroId] = newState;
-			OnHealthBarChanged?.Invoke(newState);
-		}
+            HealthBarState state = new HealthBarState(
+                id,
+                old.Health,
+                old.MaxHealth,
+                enemy.Position,
+                old.IsVisible
+            );
+            _states[id] = state;
 
-		private void OnEnemyHit(EnemyHitResult hitResult)
-		{
-			if (hitResult.IsLethal || !_enemiesController.Enemies.TryGetValue(hitResult.EnemyId, out EnemyState enemy)) return;
+            if (state.IsVisible)
+            {
+                OnHealthBarChanged?.Invoke(state);
+            }
+        }
 
-			_currentTime = Time.time;
-			HealthBarId id = new HealthBarId(HealthBarOwner.Enemy, hitResult.EnemyId);
-			HealthBarState newState = new HealthBarState(id, Mathf.Max(0, hitResult.RemainingHealth), enemy.Config.InitialHealth, enemy.Position, true);
-			bool isNew = !_states.ContainsKey(id);
-			_states[id] = newState;
-			_enemyHideTimes[hitResult.EnemyId] = _currentTime + _enemyVisibilityDuration;
-			if (isNew)
-			{
-				_visibleEnemyIds.Add(hitResult.EnemyId);
-				OnHealthBarAdded?.Invoke(newState);
-			}
-			else
-			{
-				EnsureEnemyVisibleId(hitResult.EnemyId);
-				OnHealthBarChanged?.Invoke(newState);
-			}
-		}
+        /// <summary>Removes enemy bar and timeout state.</summary>
+        public void RemoveEnemy(int id)
+        {
+            HealthBarId bar = new HealthBarId(HealthBarOwner.Enemy, id);
 
-		private void OnEnemyPositionChanged(EnemyState enemyState)
-		{
-			HealthBarId id = new HealthBarId(HealthBarOwner.Enemy, enemyState.Id);
-			if (!_states.TryGetValue(id, out HealthBarState state) || state.WorldPosition == enemyState.Position) return;
+            if (_states.Remove(bar))
+            {
+                OnHealthBarRemoved?.Invoke(bar);
+            }
 
-			HealthBarState newState = new HealthBarState(id, state.Health, state.MaxHealth, enemyState.Position, state.IsVisible);
-			_states[id] = newState;
-			if (newState.IsVisible) OnHealthBarChanged?.Invoke(newState);
-		}
+            _hideTimes.Remove(id);
+        }
 
-		private void OnEnemyRemoved(int enemyId)
-		{
-			HealthBarId id = new HealthBarId(HealthBarOwner.Enemy, enemyId);
-			if (_states.Remove(id)) OnHealthBarRemoved?.Invoke(id);
-			_enemyHideTimes.Remove(enemyId);
-			RemoveVisibleEnemyId(enemyId);
-		}
+        /// <summary>Hides enemy bars whose visibility timeout has elapsed.</summary>
+        public void Tick(float time)
+        {
 
-		private void EnsureEnemyVisibleId(int enemyId)
-		{
-			for (int i = 0; i < _visibleEnemyIds.Count; i++)
-			{
-				if (_visibleEnemyIds[i] == enemyId) return;
-			}
+            foreach (
+                KeyValuePair<int, float> item in new List<KeyValuePair<int, float>>(_hideTimes)
+            )
+            {
 
-			_visibleEnemyIds.Add(enemyId);
-		}
+                if (
+                    item.Value <= time
+                    && _states.TryGetValue(
+                        new HealthBarId(HealthBarOwner.Enemy, item.Key),
+                        out HealthBarState state
+                    )
+                    && state.IsVisible
+                )
+                {
+                    state = new HealthBarState(
+                        state.Id,
+                        state.Health,
+                        state.MaxHealth,
+                        state.WorldPosition,
+                        false
+                    );
+                    _states[state.Id] = state;
+                    OnHealthBarChanged?.Invoke(state);
+                    _hideTimes.Remove(item.Key);
+                }
+            }
+        }
 
-		private void RemoveVisibleEnemyId(int enemyId)
-		{
-			for (int i = 0; i < _visibleEnemyIds.Count; i++)
-			{
-				if (_visibleEnemyIds[i] != enemyId) continue;
-				int lastIndex = _visibleEnemyIds.Count - 1;
-				_visibleEnemyIds[i] = _visibleEnemyIds[lastIndex];
-				_visibleEnemyIds.RemoveAt(lastIndex);
-				return;
-			}
-		}
-
-		private static HealthBarState CreateHeroState(HeroState heroState, bool isVisible)
-		{
-			return new HealthBarState(new HealthBarId(HealthBarOwner.Hero, 0), heroState.Health, HeroConfig.Instance.InitialHealth, heroState.Position, isVisible);
-		}
-	}
+        /// <summary>Clears bars and pending visibility timeouts.</summary>
+        public void Clear()
+        {
+            _states.Clear();
+            _hideTimes.Clear();
+        }
+    }
 }

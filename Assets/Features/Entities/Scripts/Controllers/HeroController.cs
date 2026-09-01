@@ -1,179 +1,205 @@
 using System;
-using System.Threading;
-using Cysharp.Threading.Tasks;
+using System.Collections.Generic;
+using Game.Entities;
 using Game.GamePlay.Enemies;
+using Game.GamePlay.Entities;
 using Game.JoystickInput;
 using Game.Weapons;
 using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
-	/// <summary>Owns hero state, joystick movement, target selection, automatic attacks, health, and restart transitions.</summary>
-	/// <remarks>Plain C# controller. Presentation reads typed events and never changes this authoritative state.</remarks>
-	public class HeroController
-	{
-		// Services
-		private EnemiesController _enemiesController;
-		private JoystickInputService _joystickInputService;
-		private WeaponsService _weaponsService;
+    /// <summary>Owns hero state and rules. Service supplies external values and routes commands.</summary>
+    internal sealed class HeroController : IHeroPresentationSource
+    {
+        private HeroState _currentState;
+        private bool _wasMoving;
+        private bool _canRequestAttack;
 
-		// Internal State
-		private CancellationTokenSource _cancellationTokenSource;
-		private HeroState _currentState;
-		private bool _wasMoving;
+        /// <summary>Gets current hero state.</summary>
+        public HeroState CurrentState => _currentState;
+        /// <summary>Raised after hero position changes.</summary>
+        public event Action<Vector3> OnHeroPositionChanged;
+        /// <summary>Raised after an attack is confirmed.</summary>
+        public event Action<Vector3> OnAttackPerformed;
+        /// <summary>Raised after incoming damage is applied.</summary>
+        public event Action<HeroHitResult> OnHeroHit;
+        /// <summary>Raised when attack cooldown starts; payload is seconds.</summary>
+        public event Action<float> OnAttackCooldownStarted;
+        /// <summary>Raised after hero state resets.</summary>
+        public event Action<HeroState> OnRestarted;
 
-		// Public State
-		/// <summary>Gets current authoritative hero state snapshot.</summary>
-		public HeroState CurrentState => _currentState;
+        public HeroController()
+        {
+            ResetState(false);
+        }
 
-		// Events
-		/// <summary>Raised after hero position, health, or attack timing state changes.</summary>
-		public event Action<HeroState> OnStateChanged;
-		/// <summary>Raised when hero attacks a target; payload is target world position for presentation.</summary>
-		public event Action<Vector3> OnAttackPerformed;
-		/// <summary>Raised after incoming damage updates hero state; payload contains damage, remaining health, and lethality.</summary>
-		public event Action<HeroHitResult> OnHeroHit;
-		/// <summary>Raised when auto-attack cooldown starts; payload is cooldown duration in seconds.</summary>
-		public event Action<float> OnAttackCooldownStarted;
+        /// <summary>Advances hero movement and release-cooldown state for one frame.</summary>
+        public void Tick(
+            JoystickState joystick,
+            WeaponConfig weapon,
+            float currentTime,
+            float deltaTime
+        )
+        {
+            if (_currentState.IsDead)
+            {
+                _canRequestAttack = false;
+                return;
+            }
 
-		/// <summary>Sets dependencies, creates initial hero state, and starts per-frame control loop.</summary>
-		/// <param name="enemiesController">Enemy state owner queried for nearest target and sent damage.</param>
-		/// <param name="joystickInputService">Input state source controlling movement mode.</param>
-		/// <param name="weaponsService">Weapon owner supplying range, damage, and cooldown.</param>
-		/// <returns>Completed successful initialization task.</returns>
-		public UniTask<bool> Initialize(EnemiesController enemiesController, JoystickInputService joystickInputService, WeaponsService weaponsService)
-		{
-			_enemiesController = enemiesController;
-			_joystickInputService = joystickInputService;
-			_weaponsService = weaponsService;
+            if (joystick.IsActive)
+            {
+                _wasMoving = true;
+                _canRequestAttack = false;
+                var input = joystick.MovementVector;
 
-			_currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f);
-			_wasMoving = joystickInputService.CurrentState.IsActive;
-			_cancellationTokenSource = new CancellationTokenSource();
-			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
+                if (input.sqrMagnitude <= 0.01f)
+                {
+                    return;
+                }
 
-			UpdateLoop(_cancellationTokenSource.Token).Forget();
+                var position =
+                    _currentState.Position
+                    + new Vector3(-input.x, 0f, -input.y)
+                        * HeroConfig.Instance.MoveSpeed
+                        * deltaTime;
+                SetPosition(position);
+                return;
+            }
 
-			return UniTask.FromResult(true);
-		}
+            if (_wasMoving)
+            {
+                _wasMoving = false;
+                _canRequestAttack = false;
+                StartCooldown(weapon, currentTime);
+                return;
+            }
 
-		/// <summary>Applies incoming enemy damage unless hero is already dead.</summary>
-		/// <param name="damage">Damage subtracted from health; health clamps at zero.</param>
-		/// <remarks>Emits <see cref="OnStateChanged"/> then <see cref="OnHeroHit"/> after health changes, including lethal transition.</remarks>
-		public void TakeHit(int damage)
-		{
-			if (_currentState.IsDead) return;
+            _canRequestAttack = true;
+        }
 
-			int newHealth = Mathf.Max(0, _currentState.Health - damage);
-			_currentState = new HeroState(_currentState.Position, newHealth, _currentState.LastAttackTime, _currentState.NextAttackTime);
-			OnStateChanged?.Invoke(_currentState);
-			OnHeroHit?.Invoke(new HeroHitResult(damage, newHealth, _currentState.IsDead));
-		}
+        /// <summary>
+        /// Creates an attack request when hero is idle, alive, off cooldown, and has a target in
+        /// range.
+        /// </summary>
+        public bool TryCreateAttackRequest(
+            WeaponConfig weapon,
+            IReadOnlyDictionary<int, EnemyState> enemies,
+            float currentTime,
+            out HeroAttackRequest request
+        )
+        {
+            request = default;
 
-		/// <summary>Restores hero to origin, configured initial health, and available attack timing.</summary>
-		/// <remarks>Caller clears enemies separately; emits <see cref="OnStateChanged"/>.</remarks>
-		public void Restart()
-		{
-			_currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f);
-			_wasMoving = _joystickInputService.CurrentState.IsActive;
-			OnStateChanged?.Invoke(_currentState);
-		}
+            if (!_canRequestAttack || weapon == null || currentTime < _currentState.NextAttackTime)
+            {
+                return false;
+            }
 
-		/// <summary>Unsubscribes input and cancels owned update loop.</summary>
-		public UniTask Reset()
-		{
-			if (_joystickInputService != null)
-			{
-				_joystickInputService.OnStateChanged -= OnJoystickStateChanged;
-			}
+            foreach (var pair in enemies)
+            {
+                var enemy = pair.Value;
 
-			_cancellationTokenSource?.Cancel();
-			_cancellationTokenSource?.Dispose();
+                if (Vector3.Distance(_currentState.Position, enemy.Position) < weapon.Range)
+                {
+                    request = new HeroAttackRequest(
+                        enemy.Id,
+                        enemy.Position,
+                        weapon.Damage,
+                        weapon.Cooldown
+                    );
+                    return true;
+                }
+            }
 
-			return UniTask.CompletedTask;
-		}
+            return false;
+        }
 
-		private async UniTaskVoid UpdateLoop(CancellationToken cancellationToken)
-		{
-			while (!cancellationToken.IsCancellationRequested)
-			{
-				if (!_currentState.IsDead)
-				{
-					if (_joystickInputService.CurrentState.IsActive) UpdatePosition();
-					else AttackClosestEnemy();
-				}
+        /// <summary>Commits confirmed attack and starts its cooldown.</summary>
+        public void ConfirmAttack(HeroAttackRequest request, float currentTime)
+        {
+            StartCooldown(request.Cooldown, currentTime, true);
+            OnAttackPerformed?.Invoke(request.TargetPosition);
+        }
 
-				await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-			}
-		}
+        /// <summary>Applies incoming damage unless hero is already dead.</summary>
+        public bool TakeHit(int damage)
+        {
+            if (_currentState.IsDead)
+            {
+                return false;
+            }
 
-		private void UpdatePosition()
-		{
-			Vector2 currentMovementInput = _joystickInputService.CurrentState.IsActive ? _joystickInputService.CurrentState.MovementVector : Vector2.zero;
-			if (currentMovementInput.sqrMagnitude <= 0.01f) return;
+            var health = Mathf.Max(0, _currentState.Health - damage);
+            _currentState = new HeroState(
+                _currentState.Position,
+                health,
+                _currentState.LastAttackTime,
+                _currentState.NextAttackTime
+            );
+            OnHeroHit?.Invoke(
+                new HeroHitResult(damage, health, _currentState.Position, health == 0)
+            );
+            return true;
+        }
 
-			Vector3 movement = new Vector3(-currentMovementInput.x, 0f, -currentMovementInput.y);
-			Vector3 newPosition = _currentState.Position + movement * (HeroConfig.Instance.MoveSpeed * Time.deltaTime);
+        /// <summary>Restores initial hero state and publishes it.</summary>
+        public void Restart()
+        {
+            ResetState(true);
+        }
 
-			_currentState = new HeroState(newPosition, _currentState.Health, _currentState.LastAttackTime, _currentState.NextAttackTime);
-			OnStateChanged?.Invoke(_currentState);
-		}
+        /// <summary>Clears presentation callbacks during service teardown.</summary>
+        internal void ClearPresentationSubscribers()
+        {
+            OnHeroPositionChanged = null;
+            OnAttackPerformed = null;
+            OnHeroHit = null;
+            OnAttackCooldownStarted = null;
+            OnRestarted = null;
+        }
 
-		private void AttackClosestEnemy()
-		{
-			if (_weaponsService.CurrentWeapon == null) return;
-			if (Time.time < _currentState.NextAttackTime) return;
+        private void ResetState(bool publish)
+        {
+            _currentState = new HeroState(Vector3.zero, HeroConfig.Instance.InitialHealth, 0f, 0f);
+            _wasMoving = false;
+            _canRequestAttack = false;
 
-			if (TryFindClosestEnemy(out EnemyState closestEnemy))
-			{
-				_enemiesController.AttackEnemy(closestEnemy, _weaponsService.CurrentWeapon.Damage);
-				_currentState = new HeroState(_currentState.Position, _currentState.Health, Time.time);
-				StartAttackCooldown();
-				OnAttackPerformed?.Invoke(closestEnemy.Position);
-			}
-		}
+            if (!publish)
+            {
+                return;
+            }
 
-		private void StartAttackCooldown()
-		{
-			float cooldown = _weaponsService?.CurrentWeapon?.Cooldown ?? 0f;
-			_currentState = new HeroState(_currentState.Position, _currentState.Health, _currentState.LastAttackTime, Time.time + cooldown);
-			OnStateChanged?.Invoke(_currentState);
-			OnAttackCooldownStarted?.Invoke(cooldown);
-		}
+            OnRestarted?.Invoke(_currentState);
+        }
 
-		private void OnJoystickStateChanged(JoystickState state)
-		{
-			if (state.IsActive)
-			{
-				_wasMoving = true;
-				return;
-			}
+        private void StartCooldown(WeaponConfig weapon, float currentTime)
+        {
+            var cooldown = weapon != null ? weapon.Cooldown : 0f;
+            StartCooldown(cooldown, currentTime, false);
+        }
 
-			if (!_wasMoving) return;
+        private void StartCooldown(float cooldown, float currentTime, bool attackConfirmed)
+        {
+            _currentState = new HeroState(
+                _currentState.Position,
+                _currentState.Health,
+                attackConfirmed ? currentTime : _currentState.LastAttackTime,
+                currentTime + cooldown
+            );
+            OnAttackCooldownStarted?.Invoke(cooldown);
+        }
 
-			_wasMoving = false;
-			StartAttackCooldown();
-		}
-
-		private bool TryFindClosestEnemy(out EnemyState closestEnemy)
-		{
-			closestEnemy = default;
-			if (_weaponsService.CurrentWeapon == null || _enemiesController?.Enemies == null) return false;
-			float closestDistance = _weaponsService.CurrentWeapon.Range;
-			bool found = false;
-
-			foreach (EnemyState enemy in _enemiesController.Enemies.Values)
-			{
-				float distance = Vector3.Distance(_currentState.Position, enemy.Position);
-				if (distance < closestDistance)
-				{
-					closestDistance = distance;
-					closestEnemy = enemy;
-					found = true;
-				}
-			}
-
-			return found;
-		}
-	}
+        private void SetPosition(Vector3 position)
+        {
+            _currentState = new HeroState(
+                position,
+                _currentState.Health,
+                _currentState.LastAttackTime,
+                _currentState.NextAttackTime
+            );
+            OnHeroPositionChanged?.Invoke(position);
+        }
+    }
 }

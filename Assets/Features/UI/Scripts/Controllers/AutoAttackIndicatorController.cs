@@ -1,76 +1,57 @@
 using System;
-using Game.GamePlay.Heroes;
 using Game.JoystickInput;
 
 namespace Game.UI
 {
-	/// <summary>Owns automatic-attack indicator state from hero cooldown and joystick mode events.</summary>
-	/// <remarks>Plain C# UI controller; view consumes state event and owns Unity UI animation.</remarks>
-	public class AutoAttackIndicatorController
-	{
-		private HeroController _heroController;
-		private JoystickInputService _joystickInputService;
-		private AutoAttackIndicatorState _currentState;
+    /// <summary>Owns indicator state from explicit presentation and input values.</summary>
+    internal sealed class AutoAttackIndicatorController : IAutoAttackIndicatorPresentationSource
+    {
+        private AutoAttackIndicatorState _state = AutoAttackIndicatorState.Hidden;
 
-		/// <summary>Gets current indicator presentation state.</summary>
-		public AutoAttackIndicatorState CurrentState => _currentState;
+        /// <summary>Gets current indicator state.</summary>
+        public AutoAttackIndicatorState CurrentState => _state;
+        /// <summary>Raised after indicator state replacement.</summary>
+        public event Action<AutoAttackIndicatorState> OnStateChanged;
 
-		/// <summary>Raised after indicator state changes; payload replaces complete UI state.</summary>
-		public event Action<AutoAttackIndicatorState> OnStateChanged;
+        /// <summary>Hides indicator while input is active.</summary>
+        public void ApplyJoystick(JoystickState state)
+        {
+            if (state.IsActive)
+            {
+                Hide();
+            }
+        }
 
-		/// <summary>Subscribes to supplied gameplay contracts and initializes hidden state.</summary>
-		/// <param name="heroController">Hero cooldown and death state source.</param>
-		/// <param name="joystickInputService">Input mode source that hides indicator while active.</param>
-		public void Initialize(HeroController heroController, JoystickInputService joystickInputService)
-		{
-			_heroController = heroController;
-			_joystickInputService = joystickInputService;
-			_currentState = AutoAttackIndicatorState.Hidden;
+        /// <summary>Hides indicator after hero death.</summary>
+        public void ApplyHeroDeath() => Hide();
 
-			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
-			_heroController.OnAttackCooldownStarted += OnAttackCooldownStarted;
-		}
+        /// <summary>Hides indicator after restart.</summary>
+        public void ApplyRestart()
+        {
+            Hide();
+        }
 
-		/// <summary>Removes gameplay event subscriptions.</summary>
-		public void Reset()
-		{
-			if (_joystickInputService != null)
-			{
-				_joystickInputService.OnStateChanged -= OnJoystickStateChanged;
-			}
+        /// <summary>Shows cooldown when hero is alive and input is inactive.</summary>
+        public void StartCooldown(float duration, bool heroDead, bool inputActive)
+        {
+            if (!heroDead && !inputActive)
+            {
+                Set(new AutoAttackIndicatorState(true, duration));
+            }
+        }
 
-			if (_heroController != null)
-			{
-				_heroController.OnAttackCooldownStarted -= OnAttackCooldownStarted;
-			}
-		}
+        private void Hide()
+        {
+            if (_state.IsVisible)
+            {
+                Set(AutoAttackIndicatorState.Hidden);
+            }
+        }
 
-		private void OnJoystickStateChanged(JoystickState state)
-		{
-			if (state.IsActive)
-			{
-				Hide();
-			}
-		}
-
-		private void OnAttackCooldownStarted(float duration)
-		{
-			if (_heroController.CurrentState.IsDead || _joystickInputService.CurrentState.IsActive) return;
-
-			SetState(new AutoAttackIndicatorState(true, duration));
-		}
-
-		private void Hide()
-		{
-			if (!_currentState.IsVisible) return;
-
-			SetState(AutoAttackIndicatorState.Hidden);
-		}
-
-		private void SetState(AutoAttackIndicatorState state)
-		{
-			_currentState = state;
-			OnStateChanged?.Invoke(_currentState);
-		}
-	}
+        private void Set(AutoAttackIndicatorState state)
+        {
+            _state = state;
+            OnStateChanged?.Invoke(state);
+        }
+    }
 }

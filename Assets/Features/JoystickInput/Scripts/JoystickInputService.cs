@@ -1,105 +1,118 @@
 using System;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using Core.ServicesManager;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Game.JoystickInput
 {
-	/// <summary>Polls touch or mouse input and owns virtual joystick runtime state.</summary>
-	public class JoystickInputService : IService
-	{
-		/// <summary>Raised only when joystick state changes; payload is complete replacement state.</summary>
-		public event Action<JoystickState> OnStateChanged;
+    /// <summary>Polls touch or mouse input and owns virtual joystick runtime state.</summary>
+    public class JoystickInputService : IService
+    {
+        /// <summary>Raised only when joystick state changes; payload is complete replacement state.</summary>
+        public event Action<JoystickState> OnStateChanged;
 
-		private JoystickState _currentState;
-		private CancellationTokenSource _cancellationTokenSource;
+        private JoystickState _currentState;
+        private CancellationTokenSource _cancellationTokenSource;
 
-		/// <summary>Gets current input snapshot.</summary>
-		public JoystickState CurrentState => _currentState;
+        /// <summary>Gets current input snapshot.</summary>
+        public JoystickState CurrentState => _currentState;
 
-		/// <inheritdoc/>
-		public UniTask<bool> Initialize()
-		{
-			_currentState = JoystickState.Inactive;
-			_cancellationTokenSource = new CancellationTokenSource();
+        /// <summary>Forces inactive input and emits only when current state changes.</summary>
+        public void DeactivateInput() => UpdateState(JoystickState.Inactive);
 
-			UpdateLoop(_cancellationTokenSource.Token).Forget();
+        /// <inheritdoc/>
+        public UniTask<bool> Initialize()
+        {
+            _currentState = JoystickState.Inactive;
+            _cancellationTokenSource = new CancellationTokenSource();
 
-			return UniTask.FromResult(true);
-		}
+            UpdateLoop(_cancellationTokenSource.Token).Forget();
 
-		/// <inheritdoc/>
-		public Type[] GetDependencies()
-		{
-			return Array.Empty<Type>();
-		}
+            return UniTask.FromResult(true);
+        }
 
-		private async UniTaskVoid UpdateLoop(CancellationToken cancellationToken)
-		{
-			while (!cancellationToken.IsCancellationRequested)
-			{
-				HandleInput();
-				await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-			}
-		}
+        /// <inheritdoc/>
+        public Type[] GetDependencies()
+        {
+            return Array.Empty<Type>();
+        }
 
-		private void HandleInput()
-		{
-			bool hasInput = false;
-			Vector2 inputPosition = Vector2.zero;
-			bool isPressed = false;
-			bool isReleased = false;
+        private async UniTaskVoid UpdateLoop(CancellationToken cancellationToken)
+        {
 
-			if (Input.touchCount > 0)
-			{
-				Touch touch = Input.GetTouch(0);
-				inputPosition = touch.position;
-				hasInput = true;
-				isPressed = touch.phase == TouchPhase.Began;
-				isReleased = touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled;
-			}
-			else if (Input.GetMouseButton(0) || Input.GetMouseButtonDown(0) || Input.GetMouseButtonUp(0))
-			{
-				inputPosition = Input.mousePosition;
-				hasInput = true;
-				isPressed = Input.GetMouseButtonDown(0);
-				isReleased = Input.GetMouseButtonUp(0);
-			}
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                HandleInput();
+                await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+            }
+        }
 
-			if (isPressed)
-			{
-				UpdateState(new JoystickState(inputPosition, Vector2.zero, true));
-			}
-			else if (isReleased)
-			{
-				UpdateState(JoystickState.Inactive);
-			}
-			else if (hasInput && _currentState.IsActive)
-			{
-				float maxRadius = JoystickInputConfig.Instance.MaxRadius;
-				Vector2 delta = inputPosition - _currentState.JoystickCenter;
-				Vector2 clampedDelta = Vector2.ClampMagnitude(delta, maxRadius);
-				Vector2 normalizedMovement = clampedDelta / maxRadius;
+        private void HandleInput()
+        {
+            bool hasInput = false;
+            Vector2 inputPosition = Vector2.zero;
+            bool isPressed = false;
+            bool isReleased = false;
 
-				UpdateState(new JoystickState(_currentState.JoystickCenter, normalizedMovement, true));
-			}
-		}
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+                inputPosition = touch.position;
+                hasInput = true;
+                isPressed = touch.phase == TouchPhase.Began;
+                isReleased = touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled;
+            }
+            else if (
+                Input.GetMouseButton(0)
+                || Input.GetMouseButtonDown(0)
+                || Input.GetMouseButtonUp(0)
+            )
+            {
+                inputPosition = Input.mousePosition;
+                hasInput = true;
+                isPressed = Input.GetMouseButtonDown(0);
+                isReleased = Input.GetMouseButtonUp(0);
+            }
 
-		private void UpdateState(JoystickState newState)
-		{
-			if (_currentState.Equals(newState)) return;
+            if (isPressed)
+            {
+                UpdateState(new JoystickState(inputPosition, Vector2.zero, true));
+            }
+            else if (isReleased)
+            {
+                UpdateState(JoystickState.Inactive);
+            }
+            else if (hasInput && _currentState.IsActive)
+            {
+                float maxRadius = JoystickInputConfig.Instance.MaxRadius;
+                Vector2 delta = inputPosition - _currentState.JoystickCenter;
+                Vector2 clampedDelta = Vector2.ClampMagnitude(delta, maxRadius);
+                Vector2 normalizedMovement = clampedDelta / maxRadius;
 
-			_currentState = newState;
-			OnStateChanged?.Invoke(_currentState);
-		}
+                UpdateState(
+                    new JoystickState(_currentState.JoystickCenter, normalizedMovement, true)
+                );
+            }
+        }
 
-		/// <inheritdoc/>
-		public UniTask Reset()
-		{
-			_cancellationTokenSource?.Cancel();
-			_cancellationTokenSource?.Dispose();
-			return default;
-		}
-	}
+        private void UpdateState(JoystickState newState)
+        {
+            if (_currentState.Equals(newState))
+            {
+                return;
+            }
+
+            _currentState = newState;
+            OnStateChanged?.Invoke(_currentState);
+        }
+
+        /// <inheritdoc/>
+        public UniTask Reset()
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            return default;
+        }
+    }
 }

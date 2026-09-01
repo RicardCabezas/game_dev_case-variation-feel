@@ -1,84 +1,96 @@
 using System.Collections.Generic;
-using Game.GamePlay.Entities;
 using Core.ServicesManager;
+using Game.Entities;
+using Game.GamePlay.Entities;
 using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
-	/// <summary>Presentation owner mapping runtime enemy identities to instantiated enemy views.</summary>
-	/// <remarks>Subscribes after service initialization and mirrors controller events; never owns enemy gameplay state.</remarks>
-	public class EnemiesContainerView : MonoBehaviour
-	{
-		private EnemiesController _enemiesController;
-		private Dictionary<int, EnemyView> _enemyViews;
+    /// <summary>Presentation owner mapping runtime enemy identities to instantiated enemy views.</summary>
+    /// <remarks>
+    /// Subscribes after service initialization and mirrors controller events; never owns enemy
+    /// gameplay state.
+    /// </remarks>
+    public class EnemiesContainerView : MonoBehaviour
+    {
+        private IEnemiesPresentationSource _enemiesPresentation;
+        private Dictionary<int, EnemyView> _enemyViews;
 
-		private void Start()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
-		}
+        private void Start()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
+        }
 
-		private void OnServicesInitialized()
-		{
-			_enemiesController = ServicesLocator.Instance.GetService<EntitiesService>().EnemiesController;
-			_enemyViews = new Dictionary<int, EnemyView>();
+        private void OnServicesInitialized()
+        {
+            _enemiesPresentation = ServicesLocator
+                .Instance.GetService<EntitiesService>()
+                .EnemiesPresentation;
+            _enemyViews = new Dictionary<int, EnemyView>();
 
-			_enemiesController.OnEnemySpawned += OnEnemySpawned;
-			_enemiesController.OnEnemyRemoved += OnEnemyRemoved;
-			_enemiesController.OnEnemyPositionChanged += OnEnemyPositionChanged;
-			_enemiesController.OnEnemyHit += OnEnemyHit;
-			_enemiesController.OnEnemyAttackPerformed += OnEnemyAttackPerformed;
-		}
+            _enemiesPresentation.OnEnemySpawned += OnEnemySpawned;
+            _enemiesPresentation.OnEnemyRemoved += OnEnemyRemoved;
+            _enemiesPresentation.OnEnemyPositionChanged += OnEnemyPositionChanged;
+            _enemiesPresentation.OnEnemyHit += OnEnemyHit;
+            _enemiesPresentation.OnEnemyAttackPerformed += OnEnemyAttackPerformed;
 
-		private void OnEnemySpawned(EnemyState enemyState)
-		{
-			EnemyView enemyView = Instantiate(enemyState.Config.Prefab, transform);
-			enemyView.transform.position = enemyState.Position;
-			_enemyViews[enemyState.Id] = enemyView;
-		}
+            foreach (KeyValuePair<int, EnemyState> pair in _enemiesPresentation.CurrentStates)
+            {
+                OnEnemySpawned(pair.Value);
+            }
+        }
 
-		private void OnEnemyRemoved(int enemyId)
-		{
-			if (_enemyViews.Remove(enemyId, out EnemyView enemyView))
-			{
-				Destroy(enemyView.gameObject);
-			}
-		}
+        private void OnEnemySpawned(EnemyState enemyState)
+        {
+            EnemyView enemyView = Instantiate(enemyState.Config.Prefab, transform);
+            enemyView.transform.position = enemyState.Position;
+            _enemyViews[enemyState.Id] = enemyView;
+        }
 
-		private void OnEnemyPositionChanged(EnemyState enemyState)
-		{
-			if (_enemyViews.TryGetValue(enemyState.Id, out EnemyView enemyView))
-			{
-				enemyView.SetPosition(enemyState.Position);
-			}
-		}
+        private void OnEnemyRemoved(int enemyId)
+        {
+            if (_enemyViews.Remove(enemyId, out EnemyView enemyView))
+            {
+                Destroy(enemyView.gameObject);
+            }
+        }
 
-		private void OnEnemyHit(EnemyHitResult hitResult)
-		{
-			if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
-			{
-				enemyView.PlayDamage();
-			}
-		}
+        private void OnEnemyPositionChanged(EnemyState enemyState)
+        {
+            if (_enemyViews.TryGetValue(enemyState.Id, out EnemyView enemyView))
+            {
+                enemyView.SetPosition(enemyState.Position);
+            }
+        }
 
-		private void OnEnemyAttackPerformed(int enemyId)
-		{
-			if (_enemyViews.TryGetValue(enemyId, out EnemyView enemyView))
-			{
-				enemyView.PlayAttack();
-			}
-		}
+        private void OnEnemyHit(EnemyHitResult hitResult)
+        {
+            if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
+            {
+                enemyView.PlayDamage();
+            }
+        }
 
-		private void OnDestroy()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
-			if (_enemiesController != null)
-			{
-				_enemiesController.OnEnemySpawned -= OnEnemySpawned;
-				_enemiesController.OnEnemyRemoved -= OnEnemyRemoved;
-				_enemiesController.OnEnemyPositionChanged -= OnEnemyPositionChanged;
-				_enemiesController.OnEnemyHit -= OnEnemyHit;
-				_enemiesController.OnEnemyAttackPerformed -= OnEnemyAttackPerformed;
-			}
-		}
-	}
+        private void OnEnemyAttackPerformed(int enemyId)
+        {
+            if (_enemyViews.TryGetValue(enemyId, out EnemyView enemyView))
+            {
+                enemyView.PlayAttack();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
+
+            if (_enemiesPresentation != null)
+            {
+                _enemiesPresentation.OnEnemySpawned -= OnEnemySpawned;
+                _enemiesPresentation.OnEnemyRemoved -= OnEnemyRemoved;
+                _enemiesPresentation.OnEnemyPositionChanged -= OnEnemyPositionChanged;
+                _enemiesPresentation.OnEnemyHit -= OnEnemyHit;
+                _enemiesPresentation.OnEnemyAttackPerformed -= OnEnemyAttackPerformed;
+            }
+        }
+    }
 }

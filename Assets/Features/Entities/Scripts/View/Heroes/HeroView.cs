@@ -1,153 +1,199 @@
+using Core.ServicesManager;
+using Game.Entities;
 using Game.GamePlay.Entities;
 using Game.JoystickInput;
 using Game.Weapons;
-using Core.ServicesManager;
 using UnityEngine;
 
 namespace Game.GamePlay.Heroes
 {
-	[RequireComponent(typeof(HitFlashView))]
-	/// <summary>Unity presentation for hero transform, movement and attack animation, and weapon visual.</summary>
-	/// <remarks>Mirrors controller and service events. Owns instantiated weapon view but no gameplay state.</remarks>
-	public class HeroView : MonoBehaviour
-	{
-		private static readonly int SpeedHash = Animator.StringToHash("Speed");
-		private static readonly int AttackHash = Animator.StringToHash("Attack");
+    [RequireComponent(typeof(HitFlashView))]
+    /// <summary>Unity presentation for hero transform, movement and attack animation, and weapon visual.</summary>
+    /// <remarks>Mirrors controller and service events. Owns instantiated weapon view but no gameplay state.</remarks>
+    public class HeroView : MonoBehaviour
+    {
+        private static readonly int SpeedHash = Animator.StringToHash(Constants.Animator.Hero.Speed);
+        private static readonly int AttackHash = Animator.StringToHash(Constants.Animator.Hero.Attack);
+        private static readonly int DeathHash = Animator.StringToHash(Constants.Animator.Hero.Death);
 
-		[SerializeField] private Animator animator;
-		[SerializeField] private HitFlashView hitFlashView;
-		[SerializeField] private float rotationSpeed = 10f;
-		[SerializeField] private Transform weaponSlot;
+        [SerializeField]
+        private Animator animator;
 
-		private JoystickInputService _joystickInputService;
-		private HeroController _heroController;
-		private WeaponsService _weaponsService;
-		private Vector2 _currentMovementInput;
-		private WeaponView _currentWeaponView;
-		private void Awake()
-		{
-			if (hitFlashView == null) hitFlashView = GetComponent<HitFlashView>();
-		}
+        [SerializeField]
+        private HitFlashView hitFlashView;
 
-		private void Start()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
-		}
+        [SerializeField]
+        private float rotationSpeed = 10f;
 
-		private void OnServicesInitialized()
-		{
-			_joystickInputService = ServicesLocator.Instance.GetService<JoystickInputService>();
-			_heroController = ServicesLocator.Instance.GetService<EntitiesService>().HeroController;
-			_weaponsService = ServicesLocator.Instance.GetService<WeaponsService>();
+        [SerializeField]
+        private Transform weaponSlot;
 
-			_joystickInputService.OnStateChanged += OnJoystickStateChanged;
-			_heroController.OnStateChanged += OnHeroStateChanged;
-			_heroController.OnHeroHit += OnHeroHit;
-			_heroController.OnAttackPerformed += OnAttackPerformed;
-			_weaponsService.OnWeaponChanged += OnWeaponChanged;
+        private JoystickInputService _joystickInputService;
+        private IHeroPresentationSource _heroPresentation;
+        private WeaponsService _weaponsService;
+        private Vector2 _currentMovementInput;
+        private WeaponView _currentWeaponView;
 
-			OnJoystickStateChanged(_joystickInputService.CurrentState);
-			OnHeroStateChanged(_heroController.CurrentState);
-			SpawnCurrentWeapon();
-		}
+        private void Awake()
+        {
+            if (hitFlashView == null)
+            {
+                hitFlashView = GetComponent<HitFlashView>();
+            }
+        }
 
-		private void OnDestroy()
-		{
-			ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
-			if (_joystickInputService != null)
-			{
-				_joystickInputService.OnStateChanged -= OnJoystickStateChanged;
-			}
-			if (_heroController != null)
-			{
-				_heroController.OnStateChanged -= OnHeroStateChanged;
-				_heroController.OnHeroHit -= OnHeroHit;
-				_heroController.OnAttackPerformed -= OnAttackPerformed;
-			}
-			if (_weaponsService != null)
-			{
-				_weaponsService.OnWeaponChanged -= OnWeaponChanged;
-			}
-			if (_currentWeaponView != null)
-			{
-				Destroy(_currentWeaponView.gameObject);
-			}
-		}
+        private void Start()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized += OnServicesInitialized;
+        }
 
-		private void OnJoystickStateChanged(JoystickState state)
-		{
-			_currentMovementInput = state.IsActive ? state.MovementVector : Vector2.zero;
-			UpdateAnimator();
-		}
+        private void OnServicesInitialized()
+        {
+            _joystickInputService = ServicesLocator.Instance.GetService<JoystickInputService>();
+            _heroPresentation = ServicesLocator
+                .Instance.GetService<EntitiesService>()
+                .HeroPresentation;
+            _weaponsService = ServicesLocator.Instance.GetService<WeaponsService>();
 
-		private void OnHeroStateChanged(HeroState heroState)
-		{
-			transform.position = heroState.Position;
-		}
+            _joystickInputService.OnStateChanged += OnJoystickStateChanged;
+            _heroPresentation.OnHeroPositionChanged += OnHeroPositionChanged;
+            _heroPresentation.OnRestarted += OnRestarted;
+            _heroPresentation.OnHeroHit += OnHeroHit;
+            _heroPresentation.OnAttackPerformed += OnAttackPerformed;
+            _weaponsService.OnWeaponChanged += OnWeaponChanged;
 
-		private void OnHeroHit(HeroHitResult hitResult)
-		{
-			hitFlashView?.Play();
-		}
+            OnJoystickStateChanged(_joystickInputService.CurrentState);
+            OnHeroPositionChanged(_heroPresentation.CurrentState.Position);
+            SpawnCurrentWeapon();
+        }
 
-		private void OnAttackPerformed(Vector3 targetPosition)
-		{
-			Vector3 targetDirection = targetPosition - transform.position;
-			targetDirection.y = 0f;
+        private void OnDestroy()
+        {
+            ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
 
-			if (targetDirection.sqrMagnitude > 0.01f)
-			{
-				transform.rotation = Quaternion.LookRotation(-targetDirection);
-			}
+            if (_joystickInputService != null)
+            {
+                _joystickInputService.OnStateChanged -= OnJoystickStateChanged;
+            }
 
-			if (animator != null)
-			{
-				animator.SetTrigger(AttackHash);
-			}
-		}
+            if (_heroPresentation != null)
+            {
+                _heroPresentation.OnHeroPositionChanged -= OnHeroPositionChanged;
+                _heroPresentation.OnRestarted -= OnRestarted;
+                _heroPresentation.OnHeroHit -= OnHeroHit;
+                _heroPresentation.OnAttackPerformed -= OnAttackPerformed;
+            }
 
-		private void Update()
-		{
-			if (_heroController == null || _heroController.CurrentState.IsDead) return;
-			if (_currentMovementInput.sqrMagnitude <= 0.01f) return;
+            if (_weaponsService != null)
+            {
+                _weaponsService.OnWeaponChanged -= OnWeaponChanged;
+            }
 
-			Vector3 movement = new Vector3(-_currentMovementInput.x, 0f, -_currentMovementInput.y);
-			Quaternion targetRotation = Quaternion.LookRotation(-movement);
-			transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-		}
+            if (_currentWeaponView != null)
+            {
+                Destroy(_currentWeaponView.gameObject);
+            }
+        }
 
-		private void UpdateAnimator()
-		{
-			if (animator == null) return;
-			if (_heroController is { CurrentState: { IsDead: true } })
-			{
-				animator.SetFloat(SpeedHash, 0f);
-				return;
-			}
+        private void OnJoystickStateChanged(JoystickState state)
+        {
+            _currentMovementInput = state.IsActive ? state.MovementVector : Vector2.zero;
+            UpdateAnimator();
+        }
 
-			float speed = _currentMovementInput.magnitude;
-			animator.SetFloat(SpeedHash, speed);
-		}
+        private void OnHeroPositionChanged(Vector3 position)
+        {
+            transform.position = position;
+        }
 
-		private void OnWeaponChanged(WeaponConfig newWeapon)
-		{
-			if (_currentWeaponView != null)
-			{
-				Destroy(_currentWeaponView.gameObject);
-				_currentWeaponView = null;
-			}
+        private void OnRestarted(HeroState state) => OnHeroPositionChanged(state.Position);
 
-			SpawnCurrentWeapon();
-		}
+        private void OnHeroHit(HeroHitResult hitResult)
+        {
+            hitFlashView?.Play();
 
-		private void SpawnCurrentWeapon()
-		{
-			if (_weaponsService.CurrentWeapon == null) return;
+            if (hitResult.IsLethal)
+            {
+                animator?.SetTrigger(DeathHash);
+            }
+        }
 
-			Transform parent = weaponSlot != null ? weaponSlot : transform;
-			_currentWeaponView = Instantiate(_weaponsService.CurrentWeapon.Prefab, parent);
-			_currentWeaponView.transform.localPosition = Vector3.zero;
-			_currentWeaponView.transform.localRotation = Quaternion.identity;
-		}
-	}
+        private void OnAttackPerformed(Vector3 targetPosition)
+        {
+            Vector3 targetDirection = targetPosition - transform.position;
+            targetDirection.y = 0f;
+
+            if (targetDirection.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.LookRotation(-targetDirection);
+            }
+
+            if (animator != null)
+            {
+                animator.SetTrigger(AttackHash);
+            }
+        }
+
+        private void Update()
+        {
+            if (_heroPresentation == null || _heroPresentation.CurrentState.IsDead)
+            {
+                return;
+            }
+
+            if (_currentMovementInput.sqrMagnitude <= 0.01f)
+            {
+                return;
+            }
+
+            Vector3 movement = new Vector3(-_currentMovementInput.x, 0f, -_currentMovementInput.y);
+            Quaternion targetRotation = Quaternion.LookRotation(-movement);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+        }
+
+        private void UpdateAnimator()
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            if (_heroPresentation is { CurrentState: { IsDead: true } })
+            {
+                animator.SetFloat(SpeedHash, 0f);
+                return;
+            }
+
+            float speed = _currentMovementInput.magnitude;
+            animator.SetFloat(SpeedHash, speed);
+        }
+
+        private void OnWeaponChanged(WeaponConfig newWeapon)
+        {
+            if (_currentWeaponView != null)
+            {
+                Destroy(_currentWeaponView.gameObject);
+                _currentWeaponView = null;
+            }
+
+            SpawnCurrentWeapon();
+        }
+
+        private void SpawnCurrentWeapon()
+        {
+            if (_weaponsService.CurrentWeapon == null)
+            {
+                return;
+            }
+
+            Transform parent = weaponSlot != null ? weaponSlot : transform;
+            _currentWeaponView = Instantiate(_weaponsService.CurrentWeapon.Prefab, parent);
+            _currentWeaponView.transform.localPosition = Vector3.zero;
+            _currentWeaponView.transform.localRotation = Quaternion.identity;
+        }
+    }
 }

@@ -13,8 +13,8 @@ ServicesLocator (persistent scene component)
   WeaponsService
   WorldService
   EntitiesService
-    HeroController
-    EnemiesController
+    internal HeroController / EnemiesController
+    IHeroPresentationSource / IEnemiesPresentationSource
   AutoAttackIndicatorService
     AutoAttackIndicatorController
   HealthBarsService
@@ -31,28 +31,26 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 
 | Owner | State and decisions | Main consumers |
 | --- | --- | --- |
-| `JoystickInputService` | Touch/mouse polling and `JoystickState` | `HeroController`, `JoystickView`, auto-attack indicator controller |
-| `WeaponsService` | Equipped `WeaponConfig`; index-zero startup selection | `HeroController`, `HeroView` |
+| `JoystickInputService` | Touch/mouse polling and `JoystickState` | `EntitiesService`, `JoystickView`, auto-attack adapter |
+| `WeaponsService` | Equipped `WeaponConfig`; index-zero startup selection | `EntitiesService`, `HeroView` |
 | `WorldService` | Instantiated persistent `WorldView` lifetime | Hero container |
-| `EntitiesService` | Composes hero and enemy controllers | Gameplay/UI views and services |
-| `HeroController` | Hero position, health, death, movement/attack mode, target selection, cooldown | Hero, game-over, and indicator presentation |
-| `EnemiesController` | Enemy identities, spawn, chase, attacks, damage, removal | Enemy container/view presentation |
+| `EntitiesService` | Entity loop, lifecycle, routing, restart, spawn schedule, presentation sources | Gameplay/UI views and adapters |
+| `HeroController` | Internal hero position, health, movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
+| `EnemiesController` | Internal enemy identities, chase, attacks, damage, removal, read-only presentation events | Exposed only as `IEnemiesPresentationSource` |
 | `AutoAttackIndicatorController` | Cooldown-indicator visibility and duration | Auto-attack indicator view |
 | `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
 
-Controllers and UI controllers are plain C# and must not depend on views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Views own subscriptions and remove them in `OnDestroy`.
-
-Known lifecycle exception: `EntitiesService.Reset()` currently completes without forwarding reset calls to `HeroController` or `EnemiesController`; source behavior is unchanged.
+Controllers and UI controllers are plain C# and must not depend on sibling controllers, gameplay services, reader presentation sources, views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Services own source subscriptions; views retain publisher references and unsubscribe in `OnDestroy`.
 
 ## Gameplay flow
 
 1. `JoystickInputService` emits `OnStateChanged` only when `JoystickState` changes. Input uses the first touch, otherwise mouse input. Drag displacement clamps to `JoystickInputConfig.MaxRadius` screen pixels and becomes a normalized movement vector.
-2. `HeroController` reads that state every Update. Active input moves hero at `HeroConfig.MoveSpeed` world units per second and emits `OnStateChanged` with replacement `HeroState`.
-3. Inactive input lets hero find nearest enemy strictly inside current weapon range. A confirmed attack calls `EnemiesController.AttackEnemy`, records timing, emits `OnStateChanged`, emits `OnAttackCooldownStarted` with cooldown seconds, then emits `OnAttackPerformed` with target world position.
-4. `EnemiesController` spawns while hero is alive, below `EnemiesConfig.MaxEnemies`, and after `SpawnInterval`. It tries up to 8 positions at `SpawnRadius` around hero that are at least `EnemySpacing` horizontal world units from active enemies; unsuccessful attempts skip spawn. It currently selects `Enemies[0]`.
-5. Each active enemy chases hero outside its configured attack range, replacing state and emitting `OnEnemyPositionChanged`. Inside range, elapsed cooldown causes `HeroController.TakeHit`, which emits `OnStateChanged` then `OnHeroHit` with damage, remaining health, and lethality; `EnemiesController` then emits `OnEnemyAttackPerformed` with attacking enemy identity.
-6. Enemy damage emits `OnEnemyHit` with ID, damage, remaining health, and lethality before state replacement or removal. Lethal hits then emit `OnEnemyRemoved`; the container immediately destroys the matching view.
-7. Hero health clamps at zero. Dead hero stops hero attacks/movement and enemy spawning/updates. `GameOverOverlayView` displays the restart action, which clears enemies then calls `HeroController.Restart`.
+2. One `EntitiesService` Update loop reads input, weapon, scaled time, and delta time. It advances hero movement and release cooldown through `HeroController.Tick`, then separately asks `TryCreateAttackRequest` for an idle, eligible target.
+3. A created hero attack request is routed to enemy damage; only accepted current targets confirm hero cooldown and attack presentation. Stale targets consume neither.
+4. Game starts empty. First spawn and every restart wait full `SpawnInterval`; each attempt schedules another full interval and selects `Enemies[0]`.
+5. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
+6. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal.
+7. `RestartGame()` deactivates joystick, removes enemies normally, resets IDs and hero timing/state, publishes restart snapshot, then schedules full spawn delay.
 
 No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, loot, or win-condition path exists in the inspected runtime source.
 
@@ -61,23 +59,19 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | Producer event | Timing and payload | Presentation consumer |
 | --- | --- | --- |
 | `ServicesLocator.OnAllServicesInitialized` | All services initialized; no payload | Scene and prefab views resolve services |
-| `JoystickInputService.OnStateChanged` | Complete joystick state changes | Joystick view, hero controller, indicator controller |
-| `HeroController.OnStateChanged` | Position, health, cooldown timing, or restart state changes | Hero view, game-over overlay, health-bar controller |
-| `HeroController.OnHeroHit` | Accepted incoming damage; `HeroHitResult` with damage, remaining health, and lethality | Hero hit-flash view |
-| `HeroController.OnAttackPerformed` | Confirmed hero strike; target world position | Hero view faces target and triggers attack |
-| `HeroController.OnAttackCooldownStarted` | Cooldown starts; duration seconds | Auto-attack indicator controller |
-| `EnemiesController.OnEnemySpawned` | Enemy added; initial `EnemyState` | Enemy container instantiates prefab |
-| `EnemiesController.OnEnemyPositionChanged` | Chase movement; replacement `EnemyState` | Enemy view position and move animation |
-| `EnemiesController.OnEnemyHit` | Before removal/replacement; `EnemyHitResult` | Bee damage animation and hit flash, including lethal hits |
-| `EnemiesController.OnEnemyAttackPerformed` | After hero damage; enemy ID | Enemy view attack animation acknowledgement |
-| `EnemiesController.OnEnemyRemoved` | Enemy removed; enemy ID | Enemy container destroys view |
+| `JoystickInputService.OnStateChanged` | Complete joystick state changes | Joystick view and UI service adapter |
+| `IHeroPresentationSource.OnHeroPositionChanged` | Hero movement commit; `Vector3` world position | Hero view and health-bar adapter |
+| `IHeroPresentationSource.OnHeroHit` | Accepted incoming damage; self-sufficient `HeroHitResult` with health, position, and lethality | Hero view, health-bar adapter, death UI |
+| `IHeroPresentationSource.OnAttackPerformed` / `OnAttackCooldownStarted` | Confirmed attack target / cooldown duration | Hero view and auto-attack indicator adapter |
+| `IHeroPresentationSource.OnRestarted` | Hero reset commit; restored `HeroState` | Hero view and UI service adapters |
+| `IEnemiesPresentationSource` events | Spawn, movement, self-sufficient hit, confirmed attack, removal | Enemy views and health-bar adapter |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
 | `AutoAttackIndicatorController.OnStateChanged` | Complete indicator state replacement | Indicator view starts or hides fill |
 | `HealthBarsCanvasController.OnHealthBarAdded` | New hero state or first visible enemy state; `HealthBarState` | Health-bars canvas view creates or reuses bar |
 | `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
 | `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
 
-`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and `Damage` presentation. Hero damage/death and Bee death animation states have no current runtime driver.
+`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `HeroView` drives the hero `Speed`, `Attack`, and lethal-hit `Death` animator parameters. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and `Damage` presentation. Bee death animation state has no current runtime driver.
 
 ## Configuration and content selection
 
