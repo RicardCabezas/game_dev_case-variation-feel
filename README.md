@@ -1,121 +1,114 @@
 # Game Feel Home Assignment
 
-## Overview
+## Initial Considerations
 
-I treated this project as an inherited live codebase: understand its existing loop and architecture first, then improve combat readability with small, reviewable changes. The core mechanic remains unchanged: the player moves with the joystick and attacks automatically after movement stops. My work in the evaluated PRs focuses on making that automatic combat easier to read through attack, cooldown, movement, hit, and enemy-attack feedback.
+I treated this as an inherited project: understand the game first, then make small changes with clear value. The main goals were better combat feedback, stable performance, and code that still follows the existing architecture.
 
-The project uses Unity `2022.3.62f2`. The assignment allowed a maximum of eight hours and emphasized game feel, frame-budget awareness, measured optimization, and code quality.
+The project uses Unity `2022.3.62f2`. The assignment allowed up to eight hours. Generated API documentation and the current codebase map are available on [GitHub Pages](https://ricardcabezas.github.io/game_dev_case-variation-feel/).
 
-## Documentation
+## Implemented Work
 
-Open generated documentation at [GitHub Pages](https://ricardcabezas.github.io/game_dev_case-variation-feel/).
+| Area | What I implemented | Time spent |
+| --- | --- | ---: |
+| Analysis | Reviewed architecture, game feel, and performance; created a prioritized plan | `~1.5 h` |
+| Attack flow | Added clear attack timing, a manual attack window, button state, target validation, and attack animation | `~1 h` for initial attack feedback; later work `[TODO]` |
+| Enemy feedback | Added movement, attack, damage animation, and red hit flash | `~1 h` for hit feedback; remaining work `[TODO]` |
+| Health feedback | Added hero and enemy health bars, smoothing, visibility rules, and hero hit feedback | `[TODO: add by day]` |
+| Enemy readability | Added bee spacing and blob shadows to avoid stacking and improve grounding | `[TODO: add by day]` |
+| Performance | Added a 60 FPS target, removed recurring combat logs, reused update buffers, and reduced realtime shadows | `[TODO: add by day]` |
+| Code quality and docs | Added architecture rules, XML documentation, Doxygen, and GitHub Pages automation | `[TODO: add by day]` |
 
-Documentation updates after changes reach `main`.
-
-## Approach and Rationale
-
-I first analyzed the project structure, feedback gaps, and likely performance-sensitive paths. I also played the game and reviewed Android Development Builds while collecting profiler data. This produced a codebase map, performance investigation, game-feel opportunity analysis, architecture guideline, and prioritized implementation proposal.
-
-The project already contained useful but unwired content, including hero and bee animations. Under the time constraint, I chose to reuse nearby existing assets instead of creating a broader content system. I also kept auto-attack and immediate damage intact. The goal was clearer cause and effect, not a new combat mechanic.
-
-The existing architecture was sufficient for this small test. I avoided a broad refactor and followed its main boundary:
-
-- Plain C# controllers and services own gameplay or UI state and decisions.
-- Typed events carry authoritative state changes to presentation.
-- `MonoBehaviour` views own Animator, material, prefab, and UI work.
-- Existing service initialization and cleanup patterns remain in use.
-
-This let me contribute quickly while keeping the changes reasonably scalable and consistent with the base project.
-
-## Implemented Feedback
-
-### Readable auto-attack
-
-I added explicit feedback around the existing automatic strike:
-
-- `HeroController` records the next allowed attack time and emits typed attack and cooldown events.
-- When movement stops, a radial UI fill communicates the cooldown before the next automatic attack.
-- On a successful attack, the hero faces the selected target and plays the existing attack animation.
-- Damage still resolves immediately; the animation communicates an action that has already been accepted by gameplay logic.
-
-I kept UI state in a plain `AutoAttackIndicatorController`, exposed it through `AutoAttackIndicatorState`, and left fill animation and helper-text visibility in `AutoAttackIndicatorView`.
-
-### Bee movement and attack feedback
-
-I added a small Animator contract for the existing bee controller: `IsMoving`, `Damage`, and `Attack`. Position updates now route through `EnemyView.SetPosition`, which drives movement animation. When an enemy performs its authoritative attack, `EnemiesController` emits the enemy ID; the container resolves the matching view and plays the attack animation.
-
-The enemy attack event is emitted after hero damage is applied. It is therefore hit acknowledgement, not a pre-hit telegraph.
-
-### Bee hit reaction
-
-I added `EnemyHitResult` so the damage boundary can report enemy ID, damage, remaining health, and whether the hit is lethal. `EnemiesController` now resolves the current dictionary state before applying damage and preserves the enemy attack timestamp when it stores nonlethal health.
-
-For a nonlethal hit, the bee plays its existing damage animation and receives a bounded `0.1 s` red flash. The flash uses `MaterialPropertyBlock`, avoiding per-hit material instantiation. The view owns this presentation work; the gameplay controller does not reference Animator or renderer components.
-
-Lethal hits intentionally retain the base lifecycle: the enemy leaves gameplay and its view is removed immediately. This evaluated implementation does not add a death-animation delay.
-
-## Performance Investigation
-
-I profiled on a Google Pixel 7 running an Android Development Build. I used an explicit 90 FPS target for the reported frame-time experiments and added Unity Memory Profiler `1.1.12` and Profile Analyzer `1.2.4` to support investigation.
-
-| Scenario | Result | Interpretation |
-| --- | ---: | --- |
-| 20 moving bees, 299 frames | `11.08 ms` median | Current configured cap remained near the explicit 90 FPS budget. |
-| 200 moving bees | `19.87 ms` median | Larger unsupported swarm missed the 90 FPS budget. |
-| 2,000 moving bees | `94.57 ms` median | Extreme stress case exposed substantial rendering and simulation cost. |
-| 2,000 stationary bees, hero-hit log enabled | `71.77 ms` median | Stress-only baseline for recurring logging experiment. |
-| 2,000 stationary bees, hero-hit log removed | `36.09 ms` median | Removing one recurring log reduced this matched stress median by about `49.7%`. |
-| One spawn frame | `9.7 KB` GC allocation | Single captured lifecycle frame; not evidence of a normal-scale hitch. |
-| One death frame | `19.3 KB` GC allocation | No retained growth was observed after repeated normal enemy churn. |
-
-These results separate assignment-scale behavior from stress behavior. The configured 20-enemy case did not justify a swarm rewrite. The logging experiment demonstrated a large stress-case cost, but log removal was not shipped in the evaluated PRs and I do not present it as a delivered optimization.
-
-I found no major optimization that was both measured and worthwhile at the assignment's scale. The other notable concern, rendering too many animated bees, occurred beyond the supported enemy cap. I chose not to spend the remaining scope on speculative iteration changes, pooling, or large-swarm rendering work.
-
-### Profiler screenshots
-
-[TODO: embed confirmed profiler screenshots]
-
-No screenshots are included yet. The numeric results above come from the confirmed Pixel 7 captures summarized during the analysis phase.
-
-## Measurements and Validation Boundaries
-
-The performance table records the confirmed Editor/Android investigation supplied during development. I personally played the game, reviewed the project and reports, and provided build/profiler data and game-experience feedback.
-
-I have not documented additional runtime test coverage for each feedback PR because no broader verified test record was supplied for this README pass. The implementation evidence confirms the code and asset wiring, but it does not by itself prove device behavior or visual quality.
-
-## Trade-offs and Further Work
-
-- I reused existing animations and nearby assets to maximize feedback delivered within the time limit.
-- I preserved auto-attack and immediate damage instead of changing combat timing or authority.
-- I kept lethal removal immediate, so lethal hits do not receive the nonlethal damage flash or a delayed death presentation.
-- I kept the base controller/view structure rather than pursuing an idealized architecture rewrite.
-- I did not optimize for unsupported 200- or 2,000-enemy stress cases.
-- I did not ship the stress-tested log removal. If performance work continues, I would first validate logging at the normal 20-enemy cap and only change it with a comparable before/after capture.
-- I would only consider pooling or enemy-iteration/rendering changes after profiling shows a normal-scale lifecycle hitch or frame-budget problem.
-
-## Time Spent
-
-| Work item | Approximate active time |
-| --- | ---: |
-| Initial profiling, code-structure analysis, feedback analysis, and prioritization | `~1.5 h` |
-| Readable auto-attack and cooldown feedback (PR #2) | `~1 h` |
-| Bee hit feedback (PR #7) | `~1 h` |
-| Bee Animator contract, movement wiring, and attack feedback (PRs #4, #5, #8) | `[TODO: confirm exact breakdown]` |
-| Architecture guardrails (PR #3) | `[TODO: confirm]` |
-| README evaluator skill (PR #10) | Ran in background while I reviewed other agents' work; exact active time was not recorded. |
+Time for later work is not fully recorded yet. I will add it by day before claiming a verified total against the eight-hour limit.
 
 ## AI Usage
 
-I used three agents in parallel for the initial profiling review, existing-code-structure analysis, and missing-feedback analysis while I manually played and reviewed the project. I supplied performance observations from the Editor and Android Development Builds plus my own game-experience feedback. Another agent reviewed the reports and generated a prioritization proposal, which I reviewed and edited before implementation decisions were accepted.
+I used Codex because it is the coding agent I know best. There was no feature-specific reason for this choice; the same workflow could have used another agent such as Claude. I did not add separate AI planning tools because I wanted to keep the test simple and use the available time on implementation and review.
 
-I remained responsible for playing the game, reviewing the code and reports, supplying profiler/build evidence, choosing scope, and editing the prioritization. The README evaluator also ran in the background while I reviewed other agent work.
+### Workflow
 
-During development, an agent-generated change broke movement after missing an existing architectural constraint. I caught that issue during review. It motivated adding `AGENTS.md` and strengthening the architecture guideline so later work would preserve controller/view ownership, feature boundaries, and lifecycle patterns. This was a useful reminder that AI output still requires candidate review and runtime validation.
+- I used Git worktrees so several agents could work in parallel from one repository clone without sharing the same checkout.
+- For a longer project, I would likely use two or three separate clones or workspaces to reduce contention further.
+- I used specialized agents for focused tasks. During the first project review, separate agents analyzed performance, architecture, and game feedback. A later mediator agent compared their reports and produced one prioritized proposal.
+- I created reusable skills for repetitive work, including PR-based README evaluation and documentation maintenance.
+
+### Delegation and Responsibility
+
+I delegated most implementation work to AI agents. My role was to:
+
+- Write prompts and define scope.
+- Decide which ideas to implement.
+- Review code and agent reports.
+- Request corrections or follow-up changes.
+- Play the game, test builds, and provide profiler data.
+- Create project guidelines so agents followed the architecture and workflow I wanted.
+
+I treated agent output as a draft, not as final work. 
+
+## Trade-offs and Future Work
+
+- I reused existing animations and assets instead of building a new content system.
+- Damage stays immediate. Animations explain accepted gameplay actions; they do not control damage timing.
+- Lethal enemies are removed immediately, so there is no delayed death animation.
+- Bee spacing uses a simple two-pass pair solver. It works for the 20-enemy limit but does not scale to large swarms.
+- Blob shadows are cheaper but less accurate than realtime mesh shadows.
+- Hero health is currently `10,000` from testing and needs final tuning.
+- With more time, I would add device validation, profiler screenshots, blob-shadow before/after captures, and final balance values.
+
+## Performance
+
+Profiling used a Pixel 7 Android Development Build. Initial captures used 90 FPS, the device limit, so frame waiting would not hide CPU/GPU work. The shipped target is 60 FPS.
+
+| Scenario | Median frame time |
+| --- | ---: |
+| 20 moving bees | `11.08 ms` |
+| 200 moving bees | `19.87 ms` |
+| 2,000 moving bees | `94.57 ms` |
+| 2,000 stationary bees, hit log enabled / removed | `71.77 ms` / `36.09 ms` |
+
+The normal 20-enemy case did not justify pooling or a swarm rewrite. Later changes removed recurring combat logs, reused enemy-update buffers, avoided one chase-distance square root, and replaced realtime bee shadows with blob shadows. The observed triangle count was roughly halved, but exact capture context and before/after frame measurements are still `[TODO]`.
+
+## Game Feedback Decisions
+
+I focused on making actions easy to read:
+
+- Attack timing, full-window state, and button text show when an attack is possible or requires movement.
+- Hero and bee animations show movement, attacks, and damage.
+- Red flashes and health bars make damage clear.
+- Bee spacing prevents enemies from looking like one stacked model.
+- Blob shadows keep bees visually connected to the ground.
+
+I kept immediate damage and the existing combat authority. Presentation reacts to gameplay events; it does not decide gameplay results.
+
+## Code Quality
+
+I avoided a broad rewrite because the existing structure was good enough for this scope. Plain C# controllers and services already owned game state, while `MonoBehaviour` views owned animation, UI, materials, and prefabs. Typed events connected both sides.
+
+Changing that architecture would have added risk without improving the player experience. I kept most existing code and added focused controllers, states, events, and views where needed. I also added architecture guidance, a maintained codebase map, XML API comments, and generated documentation.
 
 ## Base Project Feedback
 
-[TODO: confirm candidate feedback on the base project]
+### Good
+
+- Clear separation between gameplay logic and Unity presentation.
+- Data-driven hero, enemy, weapon, and world configuration.
+- Useful animations and assets already existed, even when not wired into gameplay.
+- Service initialization and typed events gave new features clear integration points.
+
+### Could Be Better
+
+- Combat had little feedback, so hits and attack timing were hard to read.
+- Bees could overlap and look like one broken model.
+- Runtime content selection still uses the first weapon and enemy entry.
+- `EntitiesService.Reset()` does not forward reset calls to its controllers.
+- Some recurring logs were expensive in large stress tests.
+
+### Improvements for Scaling
+
+- Replace pairwise bee separation with spatial partitioning if enemy counts grow.
+- Add pooling only after profiling shows spawn or destruction cost at normal scale.
+- Replace index-zero content selection with an explicit selection or factory flow.
+- Make controller reset ownership complete and test service teardown.
+- Add automated gameplay tests for attack timing, damage, death, and restart flows.
 
 ## Evaluated PRs
 
@@ -130,4 +123,11 @@ During development, an agent-generated change broke movement after missing an ex
 | #7 | `823906575a7d9be18f9835558dba3c0c7cf27787` | Yes |
 | #8 | `56fa812ac0689fb8d383cbb2ef3b3dd408de6c0a` | Yes |
 | #10 | `4026aaa6d89b06ea9d6ec6e475d0045f11160625` | Yes |
+| #11 | `dcc47e15110aef82d8a13c92aa32f772967c1d76` | Yes |
+| #12 | `0e0805dd618da9d7ab22abf3f76f7e15ad8259e6` | Yes |
+| #13 | `26319f4ba95df1d1719d2f785052fb4bde73afc9` | Yes |
+| #14 | `05e96a34f71dbfb3d521ce7f9b6b55cbdf211f2c` | Yes |
+| #15 | `096ae31aac069a0fcb80fd42b0909e7d85f84274` | Yes |
+| #16 | `8e00662e0386d504a6fbff4ec9421709e0d9e041` | Yes |
+| #17 | `7ae6b677d24eaae82609b909ed6f6cdece027fa7` | Yes |
 <!-- pr-readme-evaluator:end -->
