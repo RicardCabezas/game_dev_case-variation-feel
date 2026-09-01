@@ -49,7 +49,6 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyRemoved(int enemyId)
         {
-
             if (_enemyViews.Remove(enemyId, out EnemyView enemyView))
             {
                 Destroy(enemyView.gameObject);
@@ -58,7 +57,6 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyPositionChanged(EnemyState enemyState)
         {
-
             if (_enemyViews.TryGetValue(enemyState.Id, out EnemyView enemyView))
             {
                 enemyView.SetPosition(enemyState.Position);
@@ -67,7 +65,6 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyHit(EnemyHitResult hitResult)
         {
-
             if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
             {
                 enemyView.PlayDamage();
@@ -76,7 +73,6 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyAttackPerformed(int enemyId)
         {
-
             if (_enemyViews.TryGetValue(enemyId, out EnemyView enemyView))
             {
                 enemyView.PlayAttack();

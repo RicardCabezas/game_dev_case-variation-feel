@@ -44,7 +44,6 @@ namespace Game.UI
         /// <inheritdoc/>
         public UniTask Reset()
         {
-
             if (_hero != null)
             {
                 _hero.OnHeroHit -= OnHeroHit;
@@ -65,7 +64,6 @@ namespace Game.UI
 
         private void OnHeroHit(HeroHitResult hit)
         {
-
             if (hit.IsLethal)
             {
                 _controller.ApplyHeroDeath();

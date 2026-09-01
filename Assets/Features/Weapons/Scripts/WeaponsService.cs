@@ -19,7 +19,6 @@ namespace Game.Weapons
         /// <inheritdoc/>
         public UniTask<bool> Initialize()
         {
-
             if (WeaponsConfig.Instance.Weapons.Count > 0)
             {
                 CurrentWeapon = WeaponsConfig.Instance.Weapons[0];

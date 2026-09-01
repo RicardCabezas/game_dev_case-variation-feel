@@ -100,7 +100,6 @@ namespace Game.UI
         /// <summary>Applies nonlethal enemy hit and refreshes visibility timeout.</summary>
         public void ApplyEnemyHit(EnemyHitResult hit, float time)
         {
-
             if (hit.IsLethal)
             {
                 return;

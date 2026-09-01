@@ -57,7 +57,6 @@ namespace Game.UI
 
         private void LateUpdate()
         {
-
             if (_views == null)
             {
                 return;
@@ -71,7 +70,6 @@ namespace Game.UI
 
         private void OnHealthBarAdded(HealthBarState state)
         {
-
             if (_views.ContainsKey(state.Id))
             {
                 _views[state.Id].ApplyState(state);
@@ -93,7 +91,6 @@ namespace Game.UI
 
         private void OnHealthBarChanged(HealthBarState state)
         {
-
             if (_views.TryGetValue(state.Id, out HealthBarView view))
             {
                 view.ApplyState(state);
@@ -108,7 +105,6 @@ namespace Game.UI
 
         private void OnHealthBarRemoved(HealthBarId id)
         {
-
             if (!_views.Remove(id, out HealthBarView view))
             {
                 return;

@@ -28,7 +28,6 @@ namespace Game.World
         /// <inheritdoc/>
         public UniTask Reset()
         {
-
             if (World != null)
             {
                 Object.Destroy(World);

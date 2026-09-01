@@ -42,7 +42,6 @@ namespace Game.GamePlay.Heroes
             float deltaTime
         )
         {
-
             if (_currentState.IsDead)
             {
                 _canRequestAttack = false;
@@ -127,7 +126,6 @@ namespace Game.GamePlay.Heroes
         /// <summary>Applies incoming damage unless hero is already dead.</summary>
         public bool TakeHit(int damage)
         {
-
             if (_currentState.IsDead)
             {
                 return false;

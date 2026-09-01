@@ -75,7 +75,6 @@ namespace Game.UI
         /// <summary>Projects tracked world position into canvas space.</summary>
         public void UpdateScreenPosition()
         {
-
             if (!_stateVisible || _worldCamera == null || _canvasRect == null)
             {
                 return;
@@ -127,7 +126,6 @@ namespace Game.UI
 
         private void Update()
         {
-
             if (!_stateVisible || fillImage == null)
             {
                 return;

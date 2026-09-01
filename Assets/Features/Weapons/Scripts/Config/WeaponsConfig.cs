@@ -22,7 +22,6 @@ namespace Game.Weapons
         /// <returns>Matching configuration, or <see langword="null"/> when no match exists.</returns>
         public WeaponConfig GetWeaponById(string weaponId)
         {
-
             if (_weaponCache == null)
             {
                 _weaponCache = new Dictionary<string, WeaponConfig>();

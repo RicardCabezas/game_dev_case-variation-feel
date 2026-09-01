@@ -51,7 +51,6 @@ namespace Game.GamePlay.Enemies
         /// <returns>Matching configuration, or <see langword="null"/> when no match exists.</returns>
         public EnemyConfig GetEnemyById(string enemyId)
         {
-
             if (_enemiesMap == null)
             {
                 _enemiesMap = new Dictionary<string, EnemyConfig>();

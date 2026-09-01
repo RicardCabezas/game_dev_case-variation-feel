@@ -46,7 +46,6 @@ namespace Game.UI
         /// <inheritdoc/>
         public async UniTask Reset()
         {
-
             if (_cancellation != null)
             {
                 _cancellation.Cancel();

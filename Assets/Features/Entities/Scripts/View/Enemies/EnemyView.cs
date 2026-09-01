@@ -34,7 +34,6 @@ namespace Game.GamePlay.Enemies
 
         private void Awake()
         {
-
             if (hitFlashView == null)
             {
                 hitFlashView = GetComponent<HitFlashView>();
@@ -55,7 +54,6 @@ namespace Game.GamePlay.Enemies
 
         private void Update()
         {
-
             if (_heroPresentation == null || _heroPresentation.CurrentState.IsDead)
             {
                 return;
@@ -93,7 +91,6 @@ namespace Game.GamePlay.Enemies
         /// <summary>Plays attack presentation for controller-reported enemy attack.</summary>
         public void PlayAttack()
         {
-
             if (animator == null)
             {
                 return;

@@ -26,7 +26,6 @@ namespace Game.JoystickInput
 
         private void Awake()
         {
-
             if (joystickOuterStick != null)
             {
                 _containerRadius = joystickOuterStick.sizeDelta.x * 0.5f;
@@ -83,7 +82,6 @@ namespace Game.JoystickInput
 
         private void OnHeroHit(HeroHitResult hit)
         {
-
             if (hit.IsLethal)
             {
                 _isHeroDead = true;
@@ -95,7 +93,6 @@ namespace Game.JoystickInput
 
         private void OnJoystickStateChanged(JoystickState state)
         {
-
             if (_isHeroDead)
             {
                 joystickOuterStick.gameObject.SetActive(false);

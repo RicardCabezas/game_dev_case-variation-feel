@@ -98,7 +98,6 @@ namespace Game.JoystickInput
 
         private void UpdateState(JoystickState newState)
         {
-
             if (_currentState.Equals(newState))
             {
                 return;

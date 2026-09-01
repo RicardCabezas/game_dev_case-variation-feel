@@ -36,7 +36,6 @@ namespace Game.GamePlay.Heroes
 
         private void Awake()
         {
-
             if (hitFlashView == null)
             {
                 hitFlashView = GetComponent<HitFlashView>();
@@ -137,7 +136,6 @@ namespace Game.GamePlay.Heroes
 
         private void Update()
         {
-
             if (_heroPresentation == null || _heroPresentation.CurrentState.IsDead)
             {
                 return;
@@ -159,7 +157,6 @@ namespace Game.GamePlay.Heroes
 
         private void UpdateAnimator()
         {
-
             if (animator == null)
             {
                 return;
@@ -177,7 +174,6 @@ namespace Game.GamePlay.Heroes
 
         private void OnWeaponChanged(WeaponConfig newWeapon)
         {
-
             if (_currentWeaponView != null)
             {
                 Destroy(_currentWeaponView.gameObject);
@@ -189,7 +185,6 @@ namespace Game.GamePlay.Heroes
 
         private void SpawnCurrentWeapon()
         {
-
             if (_weaponsService.CurrentWeapon == null)
             {
                 return;

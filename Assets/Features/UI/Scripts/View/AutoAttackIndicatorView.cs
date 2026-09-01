@@ -34,7 +34,6 @@ namespace Game.UI
 
         private void Update()
         {
-
             if (!_isFilling || fillImage == null)
             {
                 return;
@@ -93,7 +92,6 @@ namespace Game.UI
 
         private void OnIndicatorStateChanged(AutoAttackIndicatorState state)
         {
-
             if (state.IsVisible)
             {
                 StartFilling(state.FillDuration);

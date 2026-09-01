@@ -49,7 +49,6 @@ namespace Game.UI
 
         private void OnHeroHit(HeroHitResult hit)
         {
-
             if (hit.IsLethal)
             {
                 gameObject.SetActive(true);

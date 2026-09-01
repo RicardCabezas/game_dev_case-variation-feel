@@ -16,7 +16,6 @@ namespace Game.UI
         /// <summary>Hides indicator while input is active.</summary>
         public void ApplyJoystick(JoystickState state)
         {
-
             if (state.IsActive)
             {
                 Hide();
@@ -35,7 +34,6 @@ namespace Game.UI
         /// <summary>Shows cooldown when hero is alive and input is inactive.</summary>
         public void StartCooldown(float duration, bool heroDead, bool inputActive)
         {
-
             if (!heroDead && !inputActive)
             {
                 Set(new AutoAttackIndicatorState(true, duration));
@@ -44,7 +42,6 @@ namespace Game.UI
 
         private void Hide()
         {
-
             if (_state.IsVisible)
             {
                 Set(AutoAttackIndicatorState.Hidden);

@@ -102,7 +102,6 @@ namespace Game.GamePlay.Enemies
         /// <summary>Advances enemy movement and spacing for one frame.</summary>
         public void Tick(HeroState hero, float deltaTime)
         {
-
             if (hero.IsDead)
             {
                 return;

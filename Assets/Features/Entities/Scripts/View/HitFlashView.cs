@@ -22,7 +22,6 @@ namespace Game.GamePlay.Entities
 
         private void Awake()
         {
-
             if (renderers == null || renderers.Length == 0)
             {
                 renderers = GetComponentsInChildren<Renderer>(true);
@@ -32,7 +31,6 @@ namespace Game.GamePlay.Entities
         /// <summary>Starts or restarts hit flash on configured renderers.</summary>
         public void Play()
         {
-
             if (renderers == null || renderers.Length == 0)
             {
                 return;
@@ -62,7 +60,6 @@ namespace Game.GamePlay.Entities
 
         private void Update()
         {
-
             if (!_isHitFlashActive || Time.time < _hitFlashEndTime)
             {
                 return;

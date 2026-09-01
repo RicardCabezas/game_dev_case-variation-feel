@@ -57,7 +57,6 @@ namespace Game.GamePlay.Entities
         /// </summary>
         public void RestartGame()
         {
-
             if (_hero == null)
             {
                 return;
@@ -71,7 +70,6 @@ namespace Game.GamePlay.Entities
         /// <inheritdoc/>
         public async UniTask Reset()
         {
-
             if (_cancellation != null)
             {
                 _cancellation.Cancel();
