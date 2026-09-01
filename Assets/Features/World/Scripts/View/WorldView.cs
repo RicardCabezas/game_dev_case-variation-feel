@@ -7,7 +7,7 @@ namespace Game.World
     public class WorldView : MonoBehaviour
     {
         [SerializeField]
-        private CinemachineVirtualCamera camera;
+        private new CinemachineVirtualCamera camera;
 
         /// <summary>Gets camera configured to follow runtime hero presentation.</summary>
         public CinemachineVirtualCamera Camera => camera;
