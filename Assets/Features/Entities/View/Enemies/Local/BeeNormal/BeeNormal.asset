@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: bee_normal
   initialHealth: 50
-  speed: 10
+  speed: 1
   attackCooldown: 3
   attackDamage: 10
   attackRange: 2
