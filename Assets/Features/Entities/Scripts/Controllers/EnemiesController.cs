@@ -1,268 +1,315 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
+using Game.Entities;
+using Game.GamePlay.Entities;
 using Game.GamePlay.Heroes;
 using UnityEngine;
 
 namespace Game.GamePlay.Enemies
 {
-	/// <summary>Owns runtime enemy state, spawning, chase movement, attacks, damage, and removal.</summary>
-	/// <remarks>Plain C# controller; views consume its events but do not own enemy decisions or state.</remarks>
-	public class EnemiesController
-	{
-		private const int SeparationPasses = 2;
+    /// <summary>Owns enemy state and rules. Service owns timing and cross-entity routing.</summary>
+    internal sealed class EnemiesController : IEnemiesPresentationSource
+    {
+        /// <summary>Number of spacing passes per frame.</summary>
+        private const int SeparationPasses = 2;
 
-		private HeroController _heroController;
+        private readonly Dictionary<int, EnemyState> _enemies = new();
+        private readonly List<int> _ids = new();
+        private readonly List<EnemyState> _updated = new();
+        private readonly List<EnemyAttackRequest> _attacks = new();
+        private int _nextEnemyId;
 
-		// Events
-		/// <summary>Raised after enemy is added; payload is its initial state.</summary>
-		public event Action<EnemyState> OnEnemySpawned;
-		/// <summary>Raised after enemy leaves controller state; payload is removed runtime identity.</summary>
-		public event Action<int> OnEnemyRemoved;
-		/// <summary>Raised when chase movement changes enemy position; payload contains replacement state.</summary>
-		public event Action<EnemyState> OnEnemyPositionChanged;
-		/// <summary>Raised for every damage attempt before lethal removal; views use nonlethal payloads for hit feedback.</summary>
-		public event Action<EnemyHitResult> OnEnemyHit;
-		/// <summary>Raised after enemy damage is applied to hero; payload is attacking enemy identity.</summary>
-		public event Action<int> OnEnemyAttackPerformed;
+        /// <summary>Gets tracked enemies by runtime ID.</summary>
+        public IReadOnlyDictionary<int, EnemyState> CurrentStates => _enemies;
+        /// <summary>Raised after an enemy enters tracking.</summary>
+        public event Action<EnemyState> OnEnemySpawned;
+        /// <summary>Raised after an enemy leaves tracking.</summary>
+        public event Action<int> OnEnemyRemoved;
+        /// <summary>Raised after an enemy position changes.</summary>
+        public event Action<EnemyState> OnEnemyPositionChanged;
+        /// <summary>Raised after accepted damage is applied.</summary>
+        public event Action<EnemyHitResult> OnEnemyHit;
+        /// <summary>Raised after an enemy attack is confirmed.</summary>
+        public event Action<int> OnEnemyAttackPerformed;
 
-		// State
-		private Dictionary<int, EnemyState> _enemies;
-		private List<int> _enemyIdsBuffer;
-		private List<EnemyState> _updatedEnemiesBuffer;
-		private CancellationTokenSource _cancellationTokenSource;
-		private int _nextEnemyId;
 
-		/// <summary>Gets authoritative enemies indexed by runtime identity.</summary>
-		public IReadOnlyDictionary<int, EnemyState> Enemies => _enemies;
+        /// <summary>Spawns an enemy when configuration and capacity allow.</summary>
+        public void TrySpawn(EnemyConfig config, Vector3 heroPosition, float angleRadians)
+        {
+            if (config == null || _enemies.Count >= EnemiesConfig.Instance.MaxEnemies)
+            {
+                return;
+            }
 
-		/// <summary>Allocates runtime state and starts spawn and update loops.</summary>
-		/// <param name="heroController">Hero state owner used for spawning, targeting, and receiving attacks.</param>
-		/// <returns>Completed successful initialization task.</returns>
-		public UniTask<bool> Initialize(HeroController heroController)
-		{
-			_heroController = heroController;
+            var position =
+                heroPosition
+                + new Vector3(Mathf.Cos(angleRadians), 0f, Mathf.Sin(angleRadians))
+                    * EnemiesConfig.Instance.SpawnRadius;
+            var state = new EnemyState(
+                _nextEnemyId++,
+                position,
+                config.InitialHealth,
+                config
+            );
+            _enemies.Add(state.Id, state);
+            OnEnemySpawned?.Invoke(state);
+        }
 
-			_enemies = new Dictionary<int, EnemyState>();
-			_enemyIdsBuffer = new List<int>(EnemiesConfig.Instance.MaxEnemies);
-			_updatedEnemiesBuffer = new List<EnemyState>(EnemiesConfig.Instance.MaxEnemies);
-			_nextEnemyId = 0;
-			_cancellationTokenSource = new CancellationTokenSource();
+        /// <summary>Applies damage and returns its self-contained result.</summary>
+        public bool TryApplyDamage(int enemyId, int damage, out EnemyHitResult hit)
+        {
+            hit = default;
 
-			SpawnLoop(_cancellationTokenSource.Token).Forget();
-			UpdateLoop(_cancellationTokenSource.Token).Forget();
+            if (!_enemies.TryGetValue(enemyId, out var enemy))
+            {
+                return false;
+            }
 
-			return UniTask.FromResult(true);
-		}
+            var health = Mathf.Max(0, enemy.Health - damage);
+            var lethal = health == 0;
+            hit = new EnemyHitResult(
+                enemy.Id,
+                health,
+                enemy.Config.InitialHealth,
+                enemy.Position,
+                lethal
+            );
 
-		/// <summary>Cancels loops, disposes their token source, and clears tracked enemies.</summary>
-		public UniTask Reset()
-		{
-			_cancellationTokenSource?.Cancel();
-			_cancellationTokenSource?.Dispose();
-			_enemies.Clear();
-			_enemyIdsBuffer.Clear();
-			_updatedEnemiesBuffer.Clear();
+            if (lethal)
+            {
+                _enemies.Remove(enemy.Id);
+            }
+            else
+            {
+                _enemies[enemy.Id] = new EnemyState(
+                    enemy.Id,
+                    enemy.Position,
+                    health,
+                    enemy.Config,
+                    enemy.LastAttackTime
+                );
+            }
+            OnEnemyHit?.Invoke(hit);
 
-			return UniTask.CompletedTask;
-		}
+            if (lethal)
+            {
+                OnEnemyRemoved?.Invoke(enemy.Id);
+            }
 
-		/// <summary>Removes every tracked enemy and raises <see cref="OnEnemyRemoved"/> for each.</summary>
-		public void ClearAllEnemies()
-		{
-			CollectEnemyIds();
-			for (int i = 0; i < _enemyIdsBuffer.Count; i++)
-			{
-				RemoveEnemy(_enemyIdsBuffer[i]);
-			}
-		}
+            return true;
+        }
 
-		/// <summary>Removes one enemy if present.</summary>
-		/// <param name="enemyId">Runtime identity to remove.</param>
-		public void RemoveEnemy(int enemyId)
-		{
-			if (_enemies.Remove(enemyId))
-			{
-				OnEnemyRemoved?.Invoke(enemyId);
-			}
-		}
+        /// <summary>Advances enemy movement and spacing for one frame.</summary>
+        public void Tick(HeroState hero, float deltaTime)
+        {
 
-		/// <summary>Applies hero damage to currently tracked enemy and emits hit/removal transitions.</summary>
-		/// <param name="enemyState">Target snapshot; its identity selects current authoritative enemy.</param>
-		/// <param name="damage">Damage subtracted from current health; positive values are expected.</param>
-		/// <remarks>Unknown targets are ignored. Lethal hits emit <see cref="OnEnemyHit"/> before <see cref="OnEnemyRemoved"/>.</remarks>
-		public void AttackEnemy(EnemyState enemyState, int damage)
-		{
-			if (!_enemies.TryGetValue(enemyState.Id, out EnemyState currentEnemy)) return;
+            if (hero.IsDead)
+            {
+                return;
+            }
 
-			int newHealth = currentEnemy.Health - damage;
-			bool isLethal = newHealth <= 0;
+            _ids.Clear();
 
-			OnEnemyHit?.Invoke(new EnemyHitResult(currentEnemy.Id, damage, newHealth, isLethal));
+            foreach (var id in _enemies.Keys)
+            {
+                _ids.Add(id);
+            }
+            _ids.Sort();
+            _updated.Clear();
 
-			if (isLethal)
-			{
-				RemoveEnemy(currentEnemy.Id);
-			}
-			else
-			{
-				EnemyState updatedEnemy = new EnemyState(currentEnemy.Id, currentEnemy.Position, newHealth, currentEnemy.Config, currentEnemy.LastAttackTime);
-				_enemies[currentEnemy.Id] = updatedEnemy;
-			}
-		}
+            foreach (var id in _ids)
+            {
 
-		private async UniTaskVoid SpawnLoop(CancellationToken cancellationToken)
-		{
-			while (!cancellationToken.IsCancellationRequested)
-			{
-				if (!_heroController.CurrentState.IsDead && _enemies.Count < EnemiesConfig.Instance.MaxEnemies)
-				{
-					SpawnEnemy();
-				}
+                if (_enemies.TryGetValue(id, out var enemy))
+                {
+                    _updated.Add(Move(enemy, hero.Position, deltaTime));
+                }
+            }
 
-				await UniTask.Delay(TimeSpan.FromSeconds(EnemiesConfig.Instance.SpawnInterval), cancellationToken: cancellationToken);
-			}
-		}
+            ResolveSpacing();
 
-		private void SpawnEnemy()
-		{
-			if (EnemiesConfig.Instance.Enemies.Count == 0) return;
+            foreach (var state in _updated)
+            {
 
-			Vector3 playerPosition = _heroController.CurrentState.Position;
-			Vector3 spawnPosition = GetRandomPositionAroundPlayer(playerPosition);
+                if (!_enemies.TryGetValue(state.Id, out var old))
+                {
+                    continue;
+                }
+                _enemies[state.Id] = state;
 
-			int enemyId = _nextEnemyId++;
-			EnemyConfig enemyConfig = EnemiesConfig.Instance.Enemies[0];
-			EnemyState newEnemy = new EnemyState(enemyId, spawnPosition, enemyConfig.InitialHealth, enemyConfig);
+                if (state.Position != old.Position)
+                {
+                    OnEnemyPositionChanged?.Invoke(state);
+                }
+            }
+        }
 
-			_enemies[enemyId] = newEnemy;
-			OnEnemySpawned?.Invoke(newEnemy);
-		}
+        /// <summary>Collects attacks currently eligible against a living hero in stable enemy ID order.</summary>
+        public IReadOnlyList<EnemyAttackRequest> CollectAttackRequests(
+            HeroState hero,
+            float currentTime
+        )
+        {
+            _attacks.Clear();
 
-		private Vector3 GetRandomPositionAroundPlayer(Vector3 playerPosition)
-		{
-			float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
-			float x = playerPosition.x + EnemiesConfig.Instance.SpawnRadius * Mathf.Cos(angle);
-			float z = playerPosition.z + EnemiesConfig.Instance.SpawnRadius * Mathf.Sin(angle);
+            if (hero.IsDead)
+            {
+                return _attacks;
+            }
 
-			return new Vector3(x, playerPosition.y, z);
-		}
+            _ids.Clear();
 
-		private async UniTaskVoid UpdateLoop(CancellationToken cancellationToken)
-		{
-			while (!cancellationToken.IsCancellationRequested)
-			{
-				if (_heroController.CurrentState.IsDead)
-				{
-					await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-					continue;
-				}
+            foreach (var id in _enemies.Keys)
+            {
+                _ids.Add(id);
+            }
 
-				UpdateEnemies();
+            _ids.Sort();
 
-				await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-			}
-		}
+            foreach (var id in _ids)
+            {
 
-		private void UpdateEnemies()
-		{
-			Vector3 heroPosition = _heroController.CurrentState.Position;
-			CollectEnemyIds();
-			_updatedEnemiesBuffer.Clear();
+                if (!_enemies.TryGetValue(id, out var enemy))
+                {
+                    continue;
+                }
 
-			for (int i = 0; i < _enemyIdsBuffer.Count; i++)
-			{
-				if (_enemies.TryGetValue(_enemyIdsBuffer[i], out EnemyState enemy))
-				{
-					_updatedEnemiesBuffer.Add(UpdateEnemy(enemy, heroPosition));
-				}
-			}
+                var delta = hero.Position - enemy.Position;
+                delta.y = 0f;
 
-			ResolveEnemySpacing();
+                if (
+                    delta.sqrMagnitude <= enemy.Config.AttackRange * enemy.Config.AttackRange
+                    && currentTime - enemy.LastAttackTime >= enemy.Config.AttackCooldown
+                )
+                {
+                    _attacks.Add(new EnemyAttackRequest(enemy.Id, enemy.Config.AttackDamage));
+                }
+            }
 
-			for (int i = 0; i < _updatedEnemiesBuffer.Count; i++)
-			{
-				EnemyState updatedEnemy = _updatedEnemiesBuffer[i];
-				if (!_enemies.TryGetValue(updatedEnemy.Id, out EnemyState previousEnemy)) continue;
+            return _attacks;
+        }
 
-				_enemies[updatedEnemy.Id] = updatedEnemy;
-				if (updatedEnemy.Position != previousEnemy.Position)
-				{
-					OnEnemyPositionChanged?.Invoke(updatedEnemy);
-				}
-			}
-		}
+        /// <summary>Commits an eligible enemy attack at scaled time.</summary>
+        public void ConfirmAttack(int enemyId, float currentTime)
+        {
+            if (!_enemies.TryGetValue(enemyId, out var enemy))
+            {
+                return;
+            }
 
-		private EnemyState UpdateEnemy(EnemyState enemy, Vector3 heroPosition)
-		{
-			float attackRange = enemy.Config.AttackRange;
-			if ((heroPosition - enemy.Position).sqrMagnitude > attackRange * attackRange)
-			{
-				Vector3 direction = heroPosition - enemy.Position;
-				direction.y = 0f;
-				direction.Normalize();
-				Vector3 newPosition = enemy.Position + direction * (enemy.Config.Speed * Time.deltaTime);
-				return new EnemyState(enemy.Id, newPosition, enemy.Health, enemy.Config, enemy.LastAttackTime);
-			}
+            _enemies[enemyId] = new EnemyState(
+                enemy.Id,
+                enemy.Position,
+                enemy.Health,
+                enemy.Config,
+                currentTime
+            );
+            OnEnemyAttackPerformed?.Invoke(enemyId);
+        }
 
-			if (Time.time - enemy.LastAttackTime < enemy.Config.AttackCooldown) return enemy;
+        /// <summary>Removes all enemies and optionally resets ID allocation.</summary>
+        public void ClearAll(bool resetIds)
+        {
+            _ids.Clear();
 
-			_heroController.TakeHit(enemy.Config.AttackDamage);
-			OnEnemyAttackPerformed?.Invoke(enemy.Id);
-			return new EnemyState(enemy.Id, enemy.Position, enemy.Health, enemy.Config, Time.time);
-		}
+            foreach (var id in _enemies.Keys)
+            {
+                _ids.Add(id);
+            }
 
-		private void ResolveEnemySpacing()
-		{
-			float spacing = EnemiesConfig.Instance.EnemySpacing;
-			if (spacing <= 0f) return;
+            _ids.Sort();
 
-			float spacingSqr = spacing * spacing;
-			for (int pass = 0; pass < SeparationPasses; pass++)
-			{
-				for (int firstIndex = 0; firstIndex < _updatedEnemiesBuffer.Count - 1; firstIndex++)
-				{
-					for (int secondIndex = firstIndex + 1; secondIndex < _updatedEnemiesBuffer.Count; secondIndex++)
-					{
-						SeparatePair(firstIndex, secondIndex, spacing, spacingSqr);
-					}
-				}
-			}
-		}
+            for (var i = 0; i < _ids.Count; i++)
+            {
+                _enemies.Remove(_ids[i]);
+                OnEnemyRemoved?.Invoke(_ids[i]);
+            }
+            _attacks.Clear();
+            _updated.Clear();
 
-		private void SeparatePair(int firstIndex, int secondIndex, float spacing, float spacingSqr)
-		{
-			EnemyState firstEnemy = _updatedEnemiesBuffer[firstIndex];
-			EnemyState secondEnemy = _updatedEnemiesBuffer[secondIndex];
-			Vector3 difference = firstEnemy.Position - secondEnemy.Position;
-			difference.y = 0f;
-			float distanceSqr = difference.sqrMagnitude;
-			if (distanceSqr >= spacingSqr) return;
+            if (resetIds)
+            {
+                _nextEnemyId = 0;
+            }
+        }
 
-			float distance = Mathf.Sqrt(distanceSqr);
-			Vector3 direction = distance > 0f ? difference / distance : Vector3.right;
-			Vector3 correction = direction * ((spacing - distance) * 0.5f);
+        /// <summary>Clears presentation callbacks during service teardown.</summary>
+        internal void ClearPresentationSubscribers()
+        {
+            OnEnemySpawned = null;
+            OnEnemyRemoved = null;
+            OnEnemyPositionChanged = null;
+            OnEnemyHit = null;
+            OnEnemyAttackPerformed = null;
+        }
 
-			_updatedEnemiesBuffer[firstIndex] = new EnemyState(firstEnemy.Id, firstEnemy.Position + correction, firstEnemy.Health, firstEnemy.Config, firstEnemy.LastAttackTime);
-			_updatedEnemiesBuffer[secondIndex] = new EnemyState(secondEnemy.Id, secondEnemy.Position - correction, secondEnemy.Health, secondEnemy.Config, secondEnemy.LastAttackTime);
-		}
+        private static EnemyState Move(EnemyState enemy, Vector3 heroPosition, float deltaTime)
+        {
+            var delta = heroPosition - enemy.Position;
+            delta.y = 0f;
 
-		private void CollectEnemyIds()
-		{
-			_enemyIdsBuffer.Clear();
-			foreach (int enemyId in _enemies.Keys)
-			{
-				_enemyIdsBuffer.Add(enemyId);
-			}
-		}
+            if (delta.sqrMagnitude <= enemy.Config.AttackRange * enemy.Config.AttackRange)
+            {
+                return enemy;
+            }
 
-		private static float GetHorizontalSqrDistance(Vector3 firstPosition, Vector3 secondPosition)
-		{
-			float x = firstPosition.x - secondPosition.x;
-			float z = firstPosition.z - secondPosition.z;
-			return x * x + z * z;
-		}
+            return new EnemyState(
+                enemy.Id,
+                enemy.Position + delta.normalized * enemy.Config.Speed * deltaTime,
+                enemy.Health,
+                enemy.Config,
+                enemy.LastAttackTime
+            );
+        }
 
-	}
+        private void ResolveSpacing()
+        {
+            var space = EnemiesConfig.Instance.EnemySpacing;
+
+            if (space <= 0f)
+            {
+                return;
+            }
+
+            var sqr = space * space;
+
+            for (var pass = 0; pass < SeparationPasses; pass++)
+            {
+                for (var a = 0; a < _updated.Count - 1; a++)
+                {
+                    for (var b = a + 1; b < _updated.Count; b++)
+                    {
+                        EnemyState first = _updated[a],
+                            second = _updated[b];
+                        var difference = first.Position - second.Position;
+                        difference.y = 0f;
+                        var distanceSqr = difference.sqrMagnitude;
+
+                        if (distanceSqr >= sqr)
+                        {
+                            continue;
+                        }
+
+                        var distance = Mathf.Sqrt(distanceSqr);
+                        var direction = distance > 0f ? difference / distance : Vector3.right;
+                        var correction = direction * ((space - distance) * .5f);
+                        _updated[a] = new EnemyState(
+                            first.Id,
+                            first.Position + correction,
+                            first.Health,
+                            first.Config,
+                            first.LastAttackTime
+                        );
+                        _updated[b] = new EnemyState(
+                            second.Id,
+                            second.Position - correction,
+                            second.Health,
+                            second.Config,
+                            second.LastAttackTime
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
