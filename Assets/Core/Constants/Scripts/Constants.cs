@@ -1,6 +1,6 @@
 namespace Game.GamePlay.Entities
 {
-    /// <summary>Centralized animator parameter names used by entity presentation.</summary>
+    /// <summary>Shared animator parameter names and gameplay world limits.</summary>
     public static class Constants
     {
         /// <summary>Animator parameter groups.</summary>

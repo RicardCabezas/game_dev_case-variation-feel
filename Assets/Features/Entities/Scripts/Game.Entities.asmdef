@@ -2,6 +2,7 @@
     "name": "Game.Entities",
     "rootNamespace": "Game.Entities",
     "references": [
+        "GUID:3fdfb905e3b444d8b0e2b96ae5a1d5c7",
         "GUID:4307f53044263cf4b835bd812fc161a4",
         "GUID:6d8d31c569ff49f792685c49d5709837",
         "GUID:894935dc78c247aba5acdc0e86f7619b",
