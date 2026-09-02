@@ -90,7 +90,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 - `HeroConfig` supplies prefab, initial health, and movement speed.
 - `WavesConfig` supplies shared enemy spacing and ordered wave definitions. Each definition supplies first-spawn delay, retry/spawn interval, concurrent-enemy cap, and ordered `EnemyConfig` batches with counts; direct entries select runtime enemy types.
 - `EnemyConfig` supplies combat/presentation properties and its own world-unit spawn radius.
-- `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab.
+- `WeaponConfig` supplies ID, damage, range, cooldown, weapon view prefab, and config-owned pickup Quad color. `WeaponPickupView` owns pickup color application through a material property block plus root spin/levitation presentation; its collider follows that root lift.
 - `WeaponsConfig` supplies pickup spawn interval, minimum/maximum radius around supplied center, maximum active pickups, and pickup prefab. `WeaponsService` selects eligible entries by configured spawn chance and clamps pickup X/Z positions to `Constants.World.ArenaLimit`.
 - `WorldConfig` and `BiomeConfig` supply prefabs instantiated by their owning service/container.
 

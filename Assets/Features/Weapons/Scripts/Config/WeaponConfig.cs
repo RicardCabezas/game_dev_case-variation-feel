@@ -24,6 +24,8 @@ namespace Game.Weapons
         [SerializeField]
         private WeaponView prefab;
 
+        [SerializeField] private Color pickupColor = Color.white;
+
         /// <summary>Gets stable content identifier used for weapon selection.</summary>
         public string Id => id;
         public string DisplayName => displayName;
@@ -41,5 +43,8 @@ namespace Game.Weapons
 
         /// <summary>Gets visual prefab owned by <see cref="Game.GamePlay.Heroes.HeroView"/>.</summary>
         public WeaponView Prefab => prefab;
+
+        /// <summary>Gets pickup Quad tint owned by <see cref="WeaponPickupView"/> presentation.</summary>
+        public Color PickupColor => pickupColor;
     }
 }

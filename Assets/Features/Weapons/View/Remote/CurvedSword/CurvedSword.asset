@@ -20,3 +20,4 @@ MonoBehaviour:
   maxUses: 10
   spawnChance: 0.5
   prefab: {fileID: -654538669453326304, guid: 4d0814cafad460246890ec829fa7071d, type: 3}
+  pickupColor: {r: 0.2, g: 0.75, b: 0.35, a: 1}
