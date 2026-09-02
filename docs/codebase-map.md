@@ -38,7 +38,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `WeaponsService` | Equipped `WeaponConfig`; index-zero startup selection | `EntitiesService`, `HeroView` |
 | `WorldService` | Instantiated persistent `WorldView` lifetime | Hero container |
 | `EntitiesService` | Entity loop, lifecycle, combat routing, enemy creation/placement/capacity, restart, presentation sources | Gameplay/UI views and adapters |
-| `HeroController` | Internal hero position, health, movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
+| `HeroController` | Internal hero position, health, bounded arena movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
 | `EnemiesController` | Internal enemy identities, chase, attacks, damage, removal, read-only presentation events | Exposed only as `IEnemiesPresentationSource` |
 | `WavesService` | Wave ticking, entity spawn routing, enemy lifecycle consumption, wave-run restart | `WaveStateView` |
 | `WaveController` | Current index, phase, batch order, pending spawns, accepted-spawn retry time, active wave-enemy IDs, completion | Exposed only as `IWavesPresentationSource` |
@@ -50,9 +50,9 @@ Controllers and UI controllers are plain C# and must not depend on sibling contr
 ## Gameplay flow
 
 1. `JoystickInputService` emits `OnStateChanged` only when `JoystickState` changes. Input uses the first touch, otherwise mouse input. Drag displacement clamps to `JoystickInputConfig.MaxRadius` screen pixels and becomes a normalized movement vector.
-2. One `EntitiesService` Update loop reads input, weapon, scaled time, and delta time. It advances hero movement and release cooldown through `HeroController.Tick`, then separately asks `TryCreateAttackRequest` for an idle, eligible target.
+2. One `EntitiesService` Update loop reads input, weapon, scaled time, and delta time. It advances hero movement through `HeroController.Tick`, which clamps X/Z position to the arena bounds, and release cooldown, then separately asks `TryCreateAttackRequest` for an idle, eligible target.
 3. A created hero attack request is routed to enemy damage; only accepted current targets confirm hero cooldown and attack presentation. Stale targets consume neither.
-4. `WavesService` owns a separate Update loop. It applies shared wave spacing to entities, starts each authored wave after its `StartDelay`, requests one batch-ordered spawn per `SpawnInterval`, and routes the requested enemy type plus current wave cap through `EntitiesService.TrySpawnEnemy`; entities retain IDs, cap enforcement, random placement using each enemy's spawn radius, state insertion, and spawn events.
+4. `WavesService` owns a separate Update loop. It applies shared wave spacing to entities, starts each authored wave after its `StartDelay`, requests one batch-ordered spawn per `SpawnInterval`, and routes the requested enemy type plus current wave cap through `EntitiesService.TrySpawnEnemy`; entities retain IDs, cap enforcement, random placement using each enemy's spawn radius, arena-bound clamping, state insertion, and spawn events.
 5. After a wave's pending spawns reach zero, `WaveController` enters clearing and advances only after every enemy it confirmed through entity lifecycle events is removed. Failed entity creation keeps that spawn pending and retries after the current wave interval. Empty or invalid authored entries are skipped; final clear completes the run.
 6. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
 7. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal. Enemy views may keep that removed identity visible for the one-second Bee death clip, but it no longer participates in gameplay or UI state.
