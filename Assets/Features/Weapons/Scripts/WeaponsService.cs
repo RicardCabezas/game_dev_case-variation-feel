@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Core.ServicesManager;
 using Cysharp.Threading.Tasks;
+using Game.GamePlay.Entities;
 using UnityEngine;
 
 namespace Game.Weapons
@@ -40,14 +41,18 @@ namespace Game.Weapons
             return UniTask.CompletedTask;
         }
 
+        /// <summary>
+        /// Schedules eligible weapon pickups while the hero is alive and keeps their X/Z positions inside arena bounds.
+        /// </summary>
         public void Tick(float time, Vector3 center, bool alive)
         {
             if (!alive || time < _nextSpawn)
                 return;
-            _nextSpawn = time + WeaponsConfig.Instance.SpawnInterval;
-            if (_spawned.Count >= WeaponsConfig.Instance.MaxSpawnedWeapons)
+            WeaponsConfig config = WeaponsConfig.Instance;
+            _nextSpawn = time + config.SpawnInterval;
+            if (_spawned.Count >= config.MaxSpawnedWeapons)
                 return;
-            IReadOnlyList<WeaponConfig> list = WeaponsConfig.Instance.Weapons;
+            IReadOnlyList<WeaponConfig> list = config.Weapons;
             float total = 0f;
             foreach (WeaponConfig weapon in list)
             {
@@ -71,14 +76,17 @@ namespace Game.Weapons
             }
             if (chosen == null)
                 return;
-            float min = WeaponsConfig.Instance.MinSpawnRadius;
-            float max = WeaponsConfig.Instance.MaxSpawnRadius;
+            float min = config.MinSpawnRadius;
+            float max = config.MaxSpawnRadius;
             float radius = Mathf.Sqrt(Mathf.Lerp(min * min, max * max, UnityEngine.Random.value));
             float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            Vector3 position = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+            position.x = Mathf.Clamp(position.x, -Constants.World.ArenaLimit, Constants.World.ArenaLimit);
+            position.z = Mathf.Clamp(position.z, -Constants.World.ArenaLimit, Constants.World.ArenaLimit);
             SpawnedWeaponState state = new SpawnedWeaponState(
                 _nextId++,
                 chosen,
-                center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius
+                position
             );
             _spawned.Add(state.Id, state);
             OnWeaponSpawned?.Invoke(state);
@@ -98,9 +106,14 @@ namespace Game.Weapons
                 return false;
             int consumed = _state.ConsumedUses + 1;
             if (consumed >= _state.MaxUses)
+            {
                 Set(EquippedWeaponState.Unarmed, true);
+            }
             else
+            {
                 Set(new EquippedWeaponState(_state.Weapon, consumed), false);
+            }
+
             return true;
         }
 

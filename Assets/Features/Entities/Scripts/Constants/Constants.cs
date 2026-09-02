@@ -38,7 +38,7 @@ namespace Game.GamePlay.Entities
 
         public static class World
         {
-                /// <summary>World-unit limit for arena boundaries. Used just for convinience in this very small project, a bit hacky</summary>
+            /// <summary>Inclusive X/Z world-unit limit for arena boundaries and spawned gameplay objects.</summary>
             public const float ArenaLimit = 14.3f;
         }
     }
