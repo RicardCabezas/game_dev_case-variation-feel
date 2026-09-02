@@ -18,6 +18,9 @@ ServicesLocator (persistent scene component)
   WavesService
     WaveController
     IWavesPresentationSource
+  BiomesService
+    BiomeController
+    IBiomePresentationSource
   AutoAttackIndicatorService
     AutoAttackIndicatorController
   HealthBarsService
@@ -42,6 +45,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `EnemiesController` | Internal enemy identities, chase, attacks, damage, removal, read-only presentation events | Exposed only as `IEnemiesPresentationSource` |
 | `WavesService` | Wave ticking, entity spawn routing, enemy lifecycle consumption, wave-run restart | `WaveStateView` |
 | `WaveController` | Current index, phase, batch order, pending spawns, accepted-spawn retry time, active wave-enemy IDs, completion | Exposed only as `IWavesPresentationSource` |
+| `BiomesService` / `BiomeController` | Wave-indexed active biome presentation selection and restart state | `BiomeContainerView` through `IBiomePresentationSource` |
 | `AutoAttackIndicatorController` | Cooldown-indicator visibility and duration | Auto-attack indicator view |
 | `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
 
@@ -56,9 +60,10 @@ Controllers and UI controllers are plain C# and must not depend on sibling contr
 3. A created hero attack request is routed to enemy damage; only accepted current targets confirm hero cooldown and attack presentation. Stale targets consume neither.
 4. `WavesService` owns a separate Update loop. It applies shared wave spacing to entities, starts each authored wave after its `StartDelay`, requests one batch-ordered spawn per `SpawnInterval`, and routes the requested enemy type plus current wave cap through `EntitiesService.TrySpawnEnemy`; entities retain IDs, cap enforcement, random placement using each enemy's spawn radius, arena-bound clamping, state insertion, and spawn events.
 5. After a wave's pending spawns reach zero, `WaveController` enters clearing and advances only after every enemy it confirmed through entity lifecycle events is removed. Failed entity creation keeps that spawn pending and retries after the current wave interval. Empty or invalid authored entries are skipped; final clear completes the run.
-6. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
-7. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal. Enemy views may keep that removed identity visible for the one-second Bee death clip, but it no longer participates in gameplay or UI state.
-8. `WavesService.RestartGame()` first resets wave state to wave zero, then calls `EntitiesService.RestartGame()`, which deactivates joystick, removes enemies normally, resets IDs and hero timing/state, and publishes restart snapshot. Old removal events cannot advance restarted waves.
+6. `BiomesService` depends on `WavesService` and consumes wave snapshots. It changes the arena only when a new wave enters spawning; clearing snapshots retain the previous biome. Current mapping is Dungeon (wave 0), Water (wave 1), and Fire (wave 2).
+7. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
+8. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal. Enemy views may keep that removed identity visible for the one-second Bee death clip, but it no longer participates in gameplay or UI state.
+9. `WavesService.RestartGame()` resets wave state to wave zero before entities clear old enemies; `BiomesService` observes that snapshot and restores Dungeon. Entities then deactivate joystick, remove enemies normally, reset IDs and hero timing/state, and publish restart snapshot. Old removal events cannot advance restarted waves.
 
 No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, loot, or win-condition path exists in the inspected runtime source.
 
@@ -92,7 +97,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 - `EnemyConfig` supplies combat/presentation properties and its own world-unit spawn radius.
 - `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab.
 - `WeaponsConfig` supplies pickup spawn interval, minimum/maximum radius around supplied center, maximum active pickups, and pickup prefab. `WeaponsService` selects eligible entries by configured spawn chance and clamps pickup X/Z positions to `Constants.World.ArenaLimit`.
-- `WorldConfig` and `BiomeConfig` supply prefabs instantiated by their owning service/container.
+- `WorldConfig` supplies the persistent world prefab. `BiomeConfig` supplies wave-indexed biome arena prefabs and optional skybox materials; `BiomesService` owns selection and `BiomeContainerView` owns instantiation.
 
 Configuration assets may contain entries not selected by the current startup or spawn paths. Catalog membership alone does not prove runtime use.
 

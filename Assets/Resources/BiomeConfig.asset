@@ -12,4 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9366266d8c68245cea877c72bae8e175, type: 3}
   m_Name: BiomeConfig
   m_EditorClassIdentifier: 
-  defaultBiomePrefab: {fileID: 5004263353047934980, guid: 7d679974c8c25414eb68a7c0f72acbd4, type: 3}
+  defaultBiome:
+    waveIndex: 0
+    prefab: {fileID: 5004263353047934980, guid: 7d679974c8c25414eb68a7c0f72acbd4, type: 3}
+    skybox: {fileID: 2100000, guid: 517a47b86f238e040a14033a751d5327, type: 2}
+  biomes:
+  - waveIndex: 0
+    prefab: {fileID: 5004263353047934980, guid: 7d679974c8c25414eb68a7c0f72acbd4, type: 3}
+    skybox: {fileID: 2100000, guid: 517a47b86f238e040a14033a751d5327, type: 2}
+  - waveIndex: 1
+    prefab: {fileID: 5004263353047934980, guid: 11111111111111111111111111111111, type: 3}
+    skybox: {fileID: 2100000, guid: 55555555555555555555555555555555, type: 2}
+  - waveIndex: 2
+    prefab: {fileID: 5004263353047934980, guid: 22222222222222222222222222222222, type: 3}
+    skybox: {fileID: 2100000, guid: 66666666666666666666666666666666, type: 2}
