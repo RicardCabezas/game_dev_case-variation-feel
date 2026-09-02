@@ -1,13 +1,17 @@
 using Core.ServicesManager;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Game.UI
 {
+    /// <summary>Displays current weapon uses and switches between equipped and unarmed icons.</summary>
     public sealed class WeaponUsesIndicatorView : MonoBehaviour
     {
-        [SerializeField] private Text label;
-        [SerializeField] private Image fill;
+        [SerializeField] private TextMeshProUGUI label;
+        [SerializeField] private Image icon;
+        [SerializeField] private Sprite swordIcon;
+        [SerializeField] private Sprite emptyHandIcon;
         private IWeaponUsesIndicatorPresentationSource _source;
 
         private void Start() => ServicesLocator.Instance.OnAllServicesInitialized += Initialize;
@@ -26,9 +30,22 @@ namespace Game.UI
                 label.text = state.Label;
             }
 
-            if (fill != null)
+            if (icon != null)
             {
-                fill.fillAmount = state.Fill;
+
+                var isUsingSword = state.Maximum > 0;
+                icon.sprite = isUsingSword ? swordIcon : emptyHandIcon;
+                icon.enabled = icon.sprite != null;
+
+                if (isUsingSword)
+                {
+                    icon.fillAmount = state.Fill;
+                }
+                else
+                {
+                    //Hand must be always visible, but has 0 uses
+                    icon.fillAmount = 1f;
+                }
             }
         }
 

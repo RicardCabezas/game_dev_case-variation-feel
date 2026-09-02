@@ -29,6 +29,7 @@ namespace Game.Weapons
             _nextId = 0;
             _nextSpawn = Time.time;
             _state = EquippedWeaponState.Unarmed;
+            
             return UniTask.FromResult(true);
         }
 

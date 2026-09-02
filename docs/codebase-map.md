@@ -80,6 +80,8 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 
 `HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; restart clears `Death` and returns the Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after the one-second clip; ordinary removal destroys immediately.
 
+`WeaponUsesIndicatorView` displays weapon-use state and selects the sword icon while armed, or the empty-hand icon while unarmed.
+
 ## Configuration and content selection
 
 - `ScriptableObjectSingleton<T>` lazily loads a Resources asset named after its concrete type and logs an error if absent.

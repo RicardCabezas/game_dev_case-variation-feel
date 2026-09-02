@@ -14,15 +14,15 @@ namespace Game.Weapons
         {
             _id = state.Id;
             _requested = false;
-            transform.position = state.Position;
+            transform.position = new Vector3(state.Position.x, transform.position.y, state.Position.z);
+
             WeaponView prefab = state.Weapon == null ? null : state.Weapon.Prefab;
             if (prefab == null)
             {
                 return;
             }
-            WeaponView visual = Instantiate(prefab, transform);
-            visual.transform.localPosition = new Vector3(0f, 0.25f, 0f);
-            visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+
+            Instantiate(prefab, transform);
         }
 
         private void OnTriggerEnter(Collider other)
