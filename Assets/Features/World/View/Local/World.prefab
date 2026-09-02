@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6754638206461141254}
   - component: {fileID: 1804462111697095429}
   - component: {fileID: -8784909212944620507}
+  - component: {fileID: 162400000000000001}
   m_Layer: 0
   m_Name: World
   m_TagString: Untagged
@@ -99,6 +100,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b3ad241e2cd45898a5f649bfda49baf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &162400000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2286102906312132611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1624d8ce19844385865837ff2deb7608, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  camera: {fileID: 6876971557978427097}
+  shakeDuration: 0.1
+  shakeAmplitude: 0.5
+  shakeFrequency: 2
 --- !u!1 &7124215502109461477
 GameObject:
   m_ObjectHideFlags: 0
@@ -182,6 +199,7 @@ GameObject:
   - component: {fileID: 181333554119806311}
   - component: {fileID: 7639057234674520157}
   - component: {fileID: 8705240070317986675}
+  - component: {fileID: 162400000000000002}
   m_Layer: 0
   m_Name: cm
   m_TagString: Untagged
@@ -259,6 +277,22 @@ MonoBehaviour:
   m_MaximumFOV: 60
   m_MinimumOrthoSize: 1
   m_MaximumOrthoSize: 5000
+--- !u!114 &162400000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8471281512527061747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68bb026fafb42b14791938953eaace77, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  m_NoiseProfile: {fileID: 11400000, guid: 8e7c1f3b2b8a4f7eb1f5b7c2d8e6a901, type: 2}
+  m_PivotOffset: {x: 0, y: 0, z: 0}
+  m_AmplitudeGain: 0
+  m_FrequencyGain: 2
 --- !u!1 &8524267878901538223
 GameObject:
   m_ObjectHideFlags: 0

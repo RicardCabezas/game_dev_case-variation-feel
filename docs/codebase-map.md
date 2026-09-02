@@ -36,7 +36,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | --- | --- | --- |
 | `JoystickInputService` | Touch/mouse polling and `JoystickState` | `EntitiesService`, `JoystickView`, auto-attack adapter |
 | `WeaponsService` | Equipped weapon durability; weighted pickup scheduling, state, and arena-bounded placement | `EntitiesService`, weapon and hero views |
-| `WorldService` | Instantiated persistent `WorldView` lifetime | Hero container |
+| `WorldService` | Instantiated persistent `WorldView` lifetime and camera presentation | Hero container |
 | `EntitiesService` | Entity loop, lifecycle, combat routing, enemy creation/placement/capacity, restart, presentation sources | Gameplay/UI views and adapters |
 | `HeroController` | Internal hero position, health, bounded arena movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
 | `EnemiesController` | Internal enemy identities, chase, attacks, damage, removal, read-only presentation events | Exposed only as `IEnemiesPresentationSource` |
@@ -80,7 +80,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
 | `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
 
-`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; restart clears `Death` and returns the Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after the one-second clip; ordinary removal destroys immediately.
+`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `WorldView` subscribes to hero hit events and drives its camera's `CameraShakeView`. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; restart clears `Death` and returns the Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after the one-second clip; ordinary removal destroys immediately.
 
 `WeaponUsesIndicatorView` displays weapon-use state and selects the sword icon while armed, or the empty-hand icon while unarmed.
 
