@@ -1,14 +1,11 @@
 {
-    "name": "Game.UI",
-    "rootNamespace": "Game.UI",
+    "name": "Game.Waves",
+    "rootNamespace": "Game.Waves",
     "references": [
-        "GUID:6d8d31c569ff49f792685c49d5709837",
         "GUID:894935dc78c247aba5acdc0e86f7619b",
         "GUID:2ba0b2bd275444a9aeb8fc997cf656fa",
-        "GUID:0555d359d9c2448e8fcd38237492f38e",
-        "GUID:f51ebe6a0ceec4240a699833d6309b23",
-        "GUID:819b24965a264c9e9c2c8b0f490b7552",
-        "Unity.TextMeshPro"
+        "GUID:6d8d31c569ff49f792685c49d5709837",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

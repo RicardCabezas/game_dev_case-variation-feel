@@ -15,6 +15,9 @@ ServicesLocator (persistent scene component)
   EntitiesService
     internal HeroController / EnemiesController
     IHeroPresentationSource / IEnemiesPresentationSource
+  WavesService
+    WaveController
+    IWavesPresentationSource
   AutoAttackIndicatorService
     AutoAttackIndicatorController
   HealthBarsService
@@ -34,9 +37,11 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `JoystickInputService` | Touch/mouse polling and `JoystickState` | `EntitiesService`, `JoystickView`, auto-attack adapter |
 | `WeaponsService` | Equipped `WeaponConfig`; index-zero startup selection | `EntitiesService`, `HeroView` |
 | `WorldService` | Instantiated persistent `WorldView` lifetime | Hero container |
-| `EntitiesService` | Entity loop, lifecycle, routing, restart, spawn schedule, presentation sources | Gameplay/UI views and adapters |
+| `EntitiesService` | Entity loop, lifecycle, combat routing, enemy creation/placement/capacity, restart, presentation sources | Gameplay/UI views and adapters |
 | `HeroController` | Internal hero position, health, movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
 | `EnemiesController` | Internal enemy identities, chase, attacks, damage, removal, read-only presentation events | Exposed only as `IEnemiesPresentationSource` |
+| `WavesService` | Wave ticking, entity spawn routing, enemy lifecycle consumption, wave-run restart | `WaveStateView` |
+| `WaveController` | Current index, phase, batch order, pending spawns, accepted-spawn retry time, active wave-enemy IDs, completion | Exposed only as `IWavesPresentationSource` |
 | `AutoAttackIndicatorController` | Cooldown-indicator visibility and duration | Auto-attack indicator view |
 | `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
 
@@ -47,10 +52,11 @@ Controllers and UI controllers are plain C# and must not depend on sibling contr
 1. `JoystickInputService` emits `OnStateChanged` only when `JoystickState` changes. Input uses the first touch, otherwise mouse input. Drag displacement clamps to `JoystickInputConfig.MaxRadius` screen pixels and becomes a normalized movement vector.
 2. One `EntitiesService` Update loop reads input, weapon, scaled time, and delta time. It advances hero movement and release cooldown through `HeroController.Tick`, then separately asks `TryCreateAttackRequest` for an idle, eligible target.
 3. A created hero attack request is routed to enemy damage; only accepted current targets confirm hero cooldown and attack presentation. Stale targets consume neither.
-4. Game starts empty. First spawn and every restart wait full `SpawnInterval`; each attempt schedules another full interval and selects `Enemies[0]`.
-5. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
-6. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal.
-7. `RestartGame()` deactivates joystick, removes enemies normally, resets IDs and hero timing/state, publishes restart snapshot, then schedules full spawn delay.
+4. `WavesService` owns a separate Update loop. It applies shared wave spacing to entities, starts each authored wave after its `StartDelay`, requests one batch-ordered spawn per `SpawnInterval`, and routes the requested enemy type plus current wave cap through `EntitiesService.TrySpawnEnemy`; entities retain IDs, cap enforcement, random placement using each enemy's spawn radius, state insertion, and spawn events.
+5. After a wave's pending spawns reach zero, `WaveController` enters clearing and advances only after every enemy it confirmed through entity lifecycle events is removed. Failed entity creation keeps that spawn pending and retries after the current wave interval. Empty or invalid authored entries are skipped; final clear completes the run.
+6. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
+7. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal.
+8. `WavesService.RestartGame()` first resets wave state to wave zero, then calls `EntitiesService.RestartGame()`, which deactivates joystick, removes enemies normally, resets IDs and hero timing/state, and publishes restart snapshot. Old removal events cannot advance restarted waves.
 
 No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, loot, or win-condition path exists in the inspected runtime source.
 
@@ -65,6 +71,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `IHeroPresentationSource.OnAttackPerformed` / `OnAttackCooldownStarted` | Confirmed attack target / cooldown duration | Hero view and auto-attack indicator adapter |
 | `IHeroPresentationSource.OnRestarted` | Hero reset commit; restored `HeroState` | Hero view and UI service adapters |
 | `IEnemiesPresentationSource` events | Spawn, movement, self-sufficient hit, confirmed attack, removal | Enemy views and health-bar adapter |
+| `IWavesPresentationSource.OnStateChanged` | Complete `WaveState` replacement after wave start, accepted/rejected spawn, tracked removal, transition, completion, or restart | Wave-state UI view |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
 | `AutoAttackIndicatorController.OnStateChanged` | Complete indicator state replacement | Indicator view starts or hides fill |
 | `HealthBarsCanvasController.OnHealthBarAdded` | New hero state or first visible enemy state; `HealthBarState` | Health-bars canvas view creates or reuses bar |
@@ -77,7 +84,8 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 
 - `ScriptableObjectSingleton<T>` lazily loads a Resources asset named after its concrete type and logs an error if absent.
 - `HeroConfig` supplies prefab, initial health, and movement speed.
-- `EnemiesConfig` supplies spawn interval/radius/cap, minimum horizontal enemy spacing, and enemy catalog. Runtime currently selects catalog index zero.
+- `WavesConfig` supplies shared enemy spacing and ordered wave definitions. Each definition supplies first-spawn delay, retry/spawn interval, concurrent-enemy cap, and ordered `EnemyConfig` batches with counts; direct entries select runtime enemy types.
+- `EnemyConfig` supplies combat/presentation properties and its own world-unit spawn radius.
 - `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab. `WeaponsService` starts with catalog index zero; `SwitchWeapon` uses `WeaponsConfig.GetWeaponById`.
 - `WorldConfig` and `BiomeConfig` supply prefabs instantiated by their owning service/container.
 

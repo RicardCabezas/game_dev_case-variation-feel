@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a99fd1b6dac44a381f6f68d1609b84e, type: 3}
+  m_Name: WavesConfig
+  m_EditorClassIdentifier:
+  enemySpacing: 1
+  waves:
+  - startDelay: 2
+    spawnInterval: 2
+    maximumConcurrentEnemies: 20
+    enemyGroups:
+    - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
+      amount: 5
+  - startDelay: 3
+    spawnInterval: 1.5
+    maximumConcurrentEnemies: 20
+    enemyGroups:
+    - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
+      amount: 5
+    - enemy: {fileID: 11400000, guid: 72575589acde143858765603cd63d900, type: 2}
+      amount: 5
+  - startDelay: 3
+    spawnInterval: 1
+    maximumConcurrentEnemies: 20
+    enemyGroups:
+    - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
+      amount: 5
+    - enemy: {fileID: 11400000, guid: 72575589acde143858765603cd63d900, type: 2}
+      amount: 5
+    - enemy: {fileID: 11400000, guid: 550201fa841244b37ab7912b243a2e6a, type: 2}
+      amount: 3

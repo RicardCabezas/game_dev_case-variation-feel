@@ -34,17 +34,27 @@ namespace Game.GamePlay.Enemies
 
 
         /// <summary>Spawns an enemy when configuration and capacity allow.</summary>
-        public void TrySpawn(EnemyConfig config, Vector3 heroPosition, float angleRadians)
+        /// <returns><see langword="true"/> after authoritative state and spawn notification commit.</returns>
+        public bool TrySpawn(
+            EnemyConfig config,
+            Vector3 heroPosition,
+            float angleRadians,
+            int maximumConcurrentEnemies
+        )
         {
-            if (config == null || _enemies.Count >= EnemiesConfig.Instance.MaxEnemies)
+            if (
+                config == null
+                || maximumConcurrentEnemies <= 0
+                || _enemies.Count >= maximumConcurrentEnemies
+            )
             {
-                return;
+                return false;
             }
 
             var position =
                 heroPosition
                 + new Vector3(Mathf.Cos(angleRadians), 0f, Mathf.Sin(angleRadians))
-                    * EnemiesConfig.Instance.SpawnRadius;
+                    * config.SpawnRadius;
             var state = new EnemyState(
                 _nextEnemyId++,
                 position,
@@ -53,6 +63,7 @@ namespace Game.GamePlay.Enemies
             );
             _enemies.Add(state.Id, state);
             OnEnemySpawned?.Invoke(state);
+            return true;
         }
 
         /// <summary>Applies damage and returns its self-contained result.</summary>
@@ -100,7 +111,7 @@ namespace Game.GamePlay.Enemies
         }
 
         /// <summary>Advances enemy movement and spacing for one frame.</summary>
-        public void Tick(HeroState hero, float deltaTime)
+        public void Tick(HeroState hero, float deltaTime, float enemySpacing)
         {
             if (hero.IsDead)
             {
@@ -125,7 +136,7 @@ namespace Game.GamePlay.Enemies
                 }
             }
 
-            ResolveSpacing();
+            ResolveSpacing(enemySpacing);
 
             foreach (var state in _updated)
             {
@@ -261,9 +272,9 @@ namespace Game.GamePlay.Enemies
             );
         }
 
-        private void ResolveSpacing()
+        private void ResolveSpacing(float space)
         {
-            var space = EnemiesConfig.Instance.EnemySpacing;
+            space = Mathf.Max(0f, space);
 
             if (space <= 0f)
             {

@@ -3,6 +3,7 @@ using Game.Entities;
 using Game.GamePlay.Enemies;
 using Game.GamePlay.Entities;
 using Game.GamePlay.Heroes;
+using Game.Waves;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +21,7 @@ namespace Game.UI
 
         private IHeroPresentationSource _heroPresentation;
         private EntitiesService _entitiesService;
+        private WavesService _wavesService;
 
         private void Start()
         {
@@ -30,6 +32,7 @@ namespace Game.UI
         private void OnServicesInitialized()
         {
             _entitiesService = ServicesLocator.Instance.GetService<EntitiesService>();
+            _wavesService = ServicesLocator.Instance.GetService<WavesService>();
             _heroPresentation = _entitiesService.HeroPresentation;
             _heroPresentation.OnHeroHit += OnHeroHit;
             _heroPresentation.OnRestarted += OnRestarted;
@@ -59,7 +62,7 @@ namespace Game.UI
 
         private void OnRestartButtonClicked()
         {
-            _entitiesService.RestartGame();
+            _wavesService.RestartGame();
         }
 
         private void OnDestroy()

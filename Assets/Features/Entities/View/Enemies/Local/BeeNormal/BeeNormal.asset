@@ -18,4 +18,5 @@ MonoBehaviour:
   attackCooldown: 3
   attackDamage: 10
   attackRange: 2
+  spawnRadius: 10
   prefab: {fileID: -4038593928516999298, guid: 41e04faa14fb7a34e8b16750ec910fc3, type: 3}
