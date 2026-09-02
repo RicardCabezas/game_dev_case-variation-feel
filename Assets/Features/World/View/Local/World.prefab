@@ -1,5 +1,49 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &900000000000000100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000101}
+  - component: {fileID: 900000000000000102}
+  m_Layer: 0
+  m_Name: WeaponsContainer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &900000000000000101
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2130043336980511308}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &900000000000000102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900000000000000100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2799927e9d044ddda6dd6860c15ce99e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2286102906312132611
 GameObject:
   m_ObjectHideFlags: 0
@@ -13,6 +57,7 @@ GameObject:
   - component: {fileID: 1804462111697095429}
   - component: {fileID: -8784909212944620507}
   - component: {fileID: 162400000000000001}
+  - component: {fileID: 162400000000000003}
   m_Layer: 0
   m_Name: World
   m_TagString: Untagged
@@ -38,31 +83,6 @@ Transform:
   - {fileID: 900000000000000101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &900000000000000100
-GameObject:
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 900000000000000101}
-  - component: {fileID: 900000000000000102}
-  m_Layer: 0
-  m_Name: WeaponsContainer
-  m_TagString: Untagged
-  m_IsActive: 1
---- !u!4 &900000000000000101
-Transform:
-  m_GameObject: {fileID: 900000000000000100}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 2130043336980511308}
---- !u!114 &900000000000000102
-MonoBehaviour:
-  m_GameObject: {fileID: 900000000000000100}
-  m_Enabled: 1
-  m_Script: {fileID: 11500000, guid: 2799927e9d044ddda6dd6860c15ce99e, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
 --- !u!114 &6754638206461141254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -76,6 +96,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   camera: {fileID: 6876971557978427097}
+  cameraShakeView: {fileID: 0}
+  cameraZoomView: {fileID: 162400000000000003}
 --- !u!114 &1804462111697095429
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110,12 +132,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1624d8ce19844385865837ff2deb7608, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   camera: {fileID: 6876971557978427097}
-  shakeDuration: 0.1
-  shakeAmplitude: 0.5
+  shakeDuration: 0.5
+  shakeAmplitude: 2
   shakeFrequency: 2
+--- !u!114 &162400000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2286102906312132611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea4a4f0c89334c12966ded0270094cc9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  camera: {fileID: 6876971557978427097}
+  zoomDuration: 0.18
+  zoomInFieldOfViewOffset: -6
 --- !u!1 &7124215502109461477
 GameObject:
   m_ObjectHideFlags: 0
@@ -287,12 +324,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 68bb026fafb42b14791938953eaace77, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   m_NoiseProfile: {fileID: 11400000, guid: 8e7c1f3b2b8a4f7eb1f5b7c2d8e6a901, type: 2}
   m_PivotOffset: {x: 0, y: 0, z: 0}
   m_AmplitudeGain: 0
   m_FrequencyGain: 2
+  mNoiseOffsets: {x: 0, y: 0, z: 0}
 --- !u!1 &8524267878901538223
 GameObject:
   m_ObjectHideFlags: 0

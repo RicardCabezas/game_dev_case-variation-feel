@@ -16,6 +16,9 @@ namespace Game.World
         [SerializeField]
         private CameraShakeView cameraShakeView;
 
+        [SerializeField]
+        private CameraZoomView cameraZoomView;
+
         private IHeroPresentationSource _heroPresentation;
 
         private void Awake()
@@ -23,6 +26,11 @@ namespace Game.World
             if (cameraShakeView == null)
             {
                 cameraShakeView = GetComponent<CameraShakeView>();
+            }
+
+            if (cameraZoomView == null)
+            {
+                cameraZoomView = GetComponent<CameraZoomView>();
             }
         }
 
@@ -40,11 +48,17 @@ namespace Game.World
                 .GetService<EntitiesService>()
                 .HeroPresentation;
             _heroPresentation.OnHeroHit += OnHeroHit;
+            _heroPresentation.OnDashPerformed += OnDashPerformed;
         }
 
         private void OnHeroHit(HeroHitResult hitResult)
         {
             cameraShakeView?.Play();
+        }
+
+        private void OnDashPerformed(HeroDashRequest dash)
+        {
+            cameraZoomView?.Play();
         }
 
         private void OnDestroy()
@@ -54,6 +68,7 @@ namespace Game.World
             if (_heroPresentation != null)
             {
                 _heroPresentation.OnHeroHit -= OnHeroHit;
+                _heroPresentation.OnDashPerformed -= OnDashPerformed;
             }
         }
     }

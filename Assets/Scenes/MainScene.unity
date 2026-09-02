@@ -1842,11 +1842,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4afec7d9e8348d4b85dc2e04f84c3f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  label: {fileID: 0}
-  fill: {fileID: 0}
-  icon: {fileID: 0}
-  swordIcon: {fileID: 0}
-  emptyHandIcon: {fileID: 0}
+  label: {fileID: 354454527}
+  icon: {fileID: 900000000000000207}
+  swordIcon: {fileID: 21300000, guid: 0905b095c78c41fb991b5e530e9be7cf, type: 3}
+  emptyHandIcon: {fileID: 21300000, guid: 3f0f55af096e400ca27d1d5eb4cf1d11, type: 3}
 --- !u!1 &900000000000000204
 GameObject:
   m_ObjectHideFlags: 0

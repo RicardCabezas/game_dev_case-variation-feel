@@ -22,6 +22,8 @@ namespace Game.GamePlay.Heroes
         public event Action<Vector3> OnHeroPositionChanged;
         /// <summary>Raised after an attack is confirmed.</summary>
         public event Action<Vector3> OnAttackPerformed;
+        /// <summary>Raised after a valid dash commits its authoritative endpoint.</summary>
+        public event Action<HeroDashRequest> OnDashPerformed;
         /// <summary>Raised after incoming damage is applied.</summary>
         public event Action<HeroHitResult> OnHeroHit;
         /// <summary>Raised when attack cooldown starts; payload is seconds.</summary>
@@ -50,8 +52,14 @@ namespace Game.GamePlay.Heroes
 
             if (joystick.IsActive)
             {
-                _wasMoving = true;
                 _canRequestAttack = false;
+
+                if (joystick.Mode == JoystickInputMode.Secondary)
+                {
+                    return;
+                }
+
+                _wasMoving = true;
                 var input = joystick.MovementVector;
 
                 if (input.sqrMagnitude <= 0.01f)
@@ -77,6 +85,31 @@ namespace Game.GamePlay.Heroes
             }
 
             _canRequestAttack = true;
+        }
+
+        /// <summary>
+        /// Validates armed living hero dash input, commits bounded endpoint, and returns complete
+        /// path for service-owned damage and weapon routing.
+        /// </summary>
+        public bool TryCreateDashRequest(
+            Vector2 inputDirection,
+            WeaponConfig weapon,
+            out HeroDashRequest request
+        )
+        {
+            request = default;
+
+            if (_currentState.IsDead || weapon == null || inputDirection.sqrMagnitude <= .0001f)
+            {
+                return false;
+            }
+
+            Vector3 direction = new Vector3(-inputDirection.x, 0f, -inputDirection.y).normalized;
+            Vector3 start = _currentState.Position;
+            SetPosition(start + direction * HeroConfig.Instance.DashDistance);
+            request = new HeroDashRequest(start, _currentState.Position, direction);
+            OnDashPerformed?.Invoke(request);
+            return true;
         }
 
         /// <summary>
@@ -155,6 +188,7 @@ namespace Game.GamePlay.Heroes
         {
             OnHeroPositionChanged = null;
             OnAttackPerformed = null;
+            OnDashPerformed = null;
             OnHeroHit = null;
             OnAttackCooldownStarted = null;
             OnRestarted = null;

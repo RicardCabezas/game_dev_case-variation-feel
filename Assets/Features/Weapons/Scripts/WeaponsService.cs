@@ -117,6 +117,15 @@ namespace Game.Weapons
             return true;
         }
 
+        /// <summary>Consumes equipped weapon immediately after a valid dash.</summary>
+        public void DestroyEquippedWeapon()
+        {
+            if (_state.IsArmed)
+            {
+                Set(EquippedWeaponState.Unarmed, true);
+            }
+        }
+
         public void Restart(float time)
         {
             Clear();

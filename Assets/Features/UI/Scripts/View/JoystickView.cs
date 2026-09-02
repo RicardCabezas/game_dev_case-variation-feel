@@ -3,6 +3,7 @@ using Game.Entities;
 using Game.GamePlay.Entities;
 using Game.GamePlay.Heroes;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Game.JoystickInput
 {
@@ -19,10 +20,18 @@ namespace Game.JoystickInput
         [SerializeField]
         private RectTransform joystickInnerStick;
 
+        [SerializeField]
+        private Graphic joystickOuterGraphic;
+
+        [SerializeField]
+        private Graphic joystickInnerGraphic;
+
         private float _containerRadius;
         private IHeroPresentationSource _heroPresentation;
         private JoystickInputService _joystickInputService;
         private bool _isHeroDead;
+        private Color _normalOuterTint;
+        private Color _normalInnerTint;
 
         private void Awake()
         {
@@ -30,6 +39,11 @@ namespace Game.JoystickInput
             {
                 _containerRadius = joystickOuterStick.sizeDelta.x * 0.5f;
             }
+
+            joystickOuterGraphic ??= joystickOuterStick.GetComponent<Graphic>();
+            joystickInnerGraphic ??= joystickInnerStick.GetComponent<Graphic>();
+            _normalOuterTint = joystickOuterGraphic != null ? joystickOuterGraphic.color : Color.white;
+            _normalInnerTint = joystickInnerGraphic != null ? joystickInnerGraphic.color : Color.white;
 
             joystickOuterStick.gameObject.SetActive(false);
         }
@@ -103,6 +117,7 @@ namespace Game.JoystickInput
 
             if (state.IsActive)
             {
+                ApplyTint(state.Mode);
                 UpdateJoystickVisuals(state);
             }
         }
@@ -113,6 +128,27 @@ namespace Game.JoystickInput
 
             Vector2 innerStickOffset = state.MovementVector * _containerRadius;
             joystickInnerStick.anchoredPosition = innerStickOffset;
+        }
+
+        private void ApplyTint(JoystickInputMode mode)
+        {
+            Color tint = mode == JoystickInputMode.Secondary
+                ? JoystickInputConfig.Instance.SecondaryJoystickTint
+                : Color.white;
+
+            if (joystickOuterGraphic != null)
+            {
+                joystickOuterGraphic.color = mode == JoystickInputMode.Secondary
+                    ? tint * _normalOuterTint
+                    : _normalOuterTint;
+            }
+
+            if (joystickInnerGraphic != null)
+            {
+                joystickInnerGraphic.color = mode == JoystickInputMode.Secondary
+                    ? tint * _normalInnerTint
+                    : _normalInnerTint;
+            }
         }
     }
 }

@@ -22,6 +22,9 @@ namespace Game.Entities
         /// <summary>Raised after a hero attack is confirmed; payload is target world position.</summary>
         event Action<Vector3> OnAttackPerformed;
 
+        /// <summary>Raised after an authoritative dash position commit; payload is complete dash path.</summary>
+        event Action<HeroDashRequest> OnDashPerformed;
+
         /// <summary>Raised when hero auto-attack cooldown starts; payload is duration in seconds.</summary>
         event Action<float> OnAttackCooldownStarted;
 

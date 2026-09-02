@@ -17,6 +17,7 @@ namespace Game.GamePlay.Enemies
         private readonly List<int> _ids = new();
         private readonly List<EnemyState> _updated = new();
         private readonly List<EnemyAttackRequest> _attacks = new();
+        private readonly List<int> _dashHits = new();
         private int _nextEnemyId;
 
         /// <summary>Gets tracked enemies by runtime ID.</summary>
@@ -212,6 +213,34 @@ namespace Game.GamePlay.Enemies
             OnEnemyAttackPerformed?.Invoke(enemyId);
         }
 
+        /// <summary>Gets tracked enemy IDs intersecting supplied X/Z dash capsule in stable ID order.</summary>
+        public IReadOnlyList<int> CollectDashHitEnemyIds(HeroDashRequest dash, float hitRadius)
+        {
+            _dashHits.Clear();
+            float radiusSqr = Mathf.Max(0f, hitRadius) * Mathf.Max(0f, hitRadius);
+            Vector2 start = new Vector2(dash.StartPosition.x, dash.StartPosition.z);
+            Vector2 end = new Vector2(dash.EndPosition.x, dash.EndPosition.z);
+            Vector2 segment = end - start;
+            float segmentLengthSqr = segment.sqrMagnitude;
+
+            foreach (var pair in _enemies)
+            {
+                Vector2 point = new Vector2(pair.Value.Position.x, pair.Value.Position.z);
+                float interpolation = segmentLengthSqr > 0f
+                    ? Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr)
+                    : 0f;
+                Vector2 closest = start + segment * interpolation;
+
+                if ((point - closest).sqrMagnitude <= radiusSqr)
+                {
+                    _dashHits.Add(pair.Key);
+                }
+            }
+
+            _dashHits.Sort();
+            return _dashHits;
+        }
+
         /// <summary>Removes all enemies and optionally resets ID allocation.</summary>
         public void ClearAll(bool resetIds)
         {
@@ -230,6 +259,7 @@ namespace Game.GamePlay.Enemies
                 OnEnemyRemoved?.Invoke(_ids[i]);
             }
             _attacks.Clear();
+            _dashHits.Clear();
             _updated.Clear();
 
             if (resetIds)
