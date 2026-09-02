@@ -106,7 +106,18 @@ namespace Game.GamePlay.Heroes
             transform.position = position;
         }
 
-        private void OnRestarted(HeroState state) => OnHeroPositionChanged(state.Position);
+        private void OnRestarted(HeroState state)
+        {
+            OnHeroPositionChanged(state.Position);
+
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.SetBool(DeathHash, false);
+            animator.SetFloat(SpeedHash, 0f);
+        }
 
         private void OnHeroHit(HeroHitResult hitResult)
         {
@@ -114,7 +125,11 @@ namespace Game.GamePlay.Heroes
 
             if (hitResult.IsLethal)
             {
-                animator?.SetTrigger(DeathHash);
+                if (animator != null)
+                {
+                    animator.SetFloat(SpeedHash, 0f);
+                    animator.SetBool(DeathHash, true);
+                }
             }
         }
 

@@ -13,8 +13,12 @@ namespace Game.GamePlay.Enemies
     /// </remarks>
     public class EnemiesContainerView : MonoBehaviour
     {
+        /// <summary>Current Bee death clip duration in scaled seconds.</summary>
+        private const float EnemyDeathAnimationDuration = 1f;
+
         private IEnemiesPresentationSource _enemiesPresentation;
         private Dictionary<int, EnemyView> _enemyViews;
+        private HashSet<int> _lethalEnemyIds;
 
         private void Start()
         {
@@ -27,6 +31,7 @@ namespace Game.GamePlay.Enemies
                 .Instance.GetService<EntitiesService>()
                 .EnemiesPresentation;
             _enemyViews = new Dictionary<int, EnemyView>();
+            _lethalEnemyIds = new HashSet<int>();
 
             _enemiesPresentation.OnEnemySpawned += OnEnemySpawned;
             _enemiesPresentation.OnEnemyRemoved += OnEnemyRemoved;
@@ -49,9 +54,18 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyRemoved(int enemyId)
         {
+            bool wasLethal = _lethalEnemyIds.Remove(enemyId);
+
             if (_enemyViews.Remove(enemyId, out EnemyView enemyView))
             {
-                Destroy(enemyView.gameObject);
+                if (wasLethal)
+                {
+                    Destroy(enemyView.gameObject, EnemyDeathAnimationDuration);
+                }
+                else
+                {
+                    Destroy(enemyView.gameObject);
+                }
             }
         }
 
@@ -67,7 +81,15 @@ namespace Game.GamePlay.Enemies
         {
             if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
             {
-                enemyView.PlayDamage();
+                if (hitResult.IsLethal)
+                {
+                    _lethalEnemyIds.Add(hitResult.EnemyId);
+                    enemyView.PlayDeath();
+                }
+                else
+                {
+                    enemyView.PlayDamage();
+                }
             }
         }
 

@@ -11,7 +11,7 @@ namespace Game.Entities
         IReadOnlyDictionary<int, EnemyState> CurrentStates { get; }
         /// <summary>Raised after enemy spawn.</summary>
         event Action<EnemyState> OnEnemySpawned;
-        /// <summary>Raised after enemy removal.</summary>
+        /// <summary>Raised after authoritative enemy removal; presentation may defer visual cleanup.</summary>
         event Action<int> OnEnemyRemoved;
         /// <summary>Raised after enemy movement.</summary>
         event Action<EnemyState> OnEnemyPositionChanged;
