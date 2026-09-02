@@ -116,6 +116,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8805e5f526549a4bbd68f48c8f5f997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  quadRenderer: {fileID: 3212575347602829968}
+  rotationDegreesPerSecond: 30
+  levitationAmplitude: 0.1
+  levitationFrequency: 1
 --- !u!65 &830364432738108372
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -131,7 +135,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
