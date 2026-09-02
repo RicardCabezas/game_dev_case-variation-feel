@@ -94,3 +94,4 @@ Configuration assets may contain entries not selected by the current startup or 
 ## Documentation maintenance
 
 Update this page with affected static facts only. Keep performance evidence, historical assessment, architectural intent, and proposals separate from current-source claims. Archived initial assessment lives under `docs/analysis/initial_assessment/` and is not maintained as current documentation.
+* `Game.Weapons.WeaponsService` is authoritative for equipped durability and spawned pickup state.

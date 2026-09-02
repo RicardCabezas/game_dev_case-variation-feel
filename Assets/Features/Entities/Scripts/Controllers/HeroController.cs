@@ -72,7 +72,7 @@ namespace Game.GamePlay.Heroes
             {
                 _wasMoving = false;
                 _canRequestAttack = false;
-                StartCooldown(weapon, currentTime);
+                if (weapon != null) StartCooldown(weapon, currentTime);
                 return;
             }
 

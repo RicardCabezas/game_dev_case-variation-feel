@@ -34,8 +34,34 @@ Transform:
   m_Children:
   - {fileID: 3444192532936986822}
   - {fileID: 9008840128090280641}
+  - {fileID: 900000000000000101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &900000000000000100
+GameObject:
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900000000000000101}
+  - component: {fileID: 900000000000000102}
+  m_Layer: 0
+  m_Name: WeaponsContainer
+  m_TagString: Untagged
+  m_IsActive: 1
+--- !u!4 &900000000000000101
+Transform:
+  m_GameObject: {fileID: 900000000000000100}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2130043336980511308}
+--- !u!114 &900000000000000102
+MonoBehaviour:
+  m_GameObject: {fileID: 900000000000000100}
+  m_Enabled: 1
+  m_Script: {fileID: 11500000, guid: 2799927e9d044ddda6dd6860c15ce99e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!114 &6754638206461141254
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -491,6 +491,7 @@ GameObject:
   - component: {fileID: 3206923099687242365}
   - component: {fileID: 8466526908961427062}
   - component: {fileID: 900000000000000002}
+  - component: {fileID: 900000000000000003}
   m_Layer: 0
   m_Name: Alice
   m_TagString: Untagged
@@ -525,7 +526,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3872ee549702407c86e8a047a0cd5a09, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   animator: {fileID: 4278100186079492270}
   hitFlashView: {fileID: 900000000000000002}
   rotationSpeed: 10
@@ -542,6 +543,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fa0f29a335b432290989d1d6055e033, type: 3}
   m_Name:
   m_EditorClassIdentifier:
+--- !u!136 &900000000000000003
+CapsuleCollider:
+  m_GameObject: {fileID: 3206923099687242354}
+  m_IsTrigger: 1
+  m_Radius: 0.6
+  m_Height: 1.8
+  m_Direction: 1
   renderers:
   - {fileID: 1042267208002864592}
   hitFlashColor: {r: 1, g: 0.2, b: 0.2, a: 1}

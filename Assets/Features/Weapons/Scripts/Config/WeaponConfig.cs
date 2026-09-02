@@ -8,6 +8,7 @@ namespace Game.Weapons
     {
         [SerializeField]
         private string id;
+        [SerializeField] private string displayName;
 
         [SerializeField]
         private int damage;
@@ -17,12 +18,15 @@ namespace Game.Weapons
 
         [SerializeField]
         private float cooldown;
+        [SerializeField, Min(1)] private int maxUses = 1;
+        [SerializeField, Min(0f)] private float spawnChance = 1f;
 
         [SerializeField]
         private WeaponView prefab;
 
         /// <summary>Gets stable content identifier used for weapon selection.</summary>
         public string Id => id;
+        public string DisplayName => displayName;
 
         /// <summary>Gets integer damage supplied to enemy attacks.</summary>
         public int Damage => damage;
@@ -32,6 +36,8 @@ namespace Game.Weapons
 
         /// <summary>Gets seconds between eligible automatic attacks.</summary>
         public float Cooldown => cooldown;
+        public int MaxUses => maxUses;
+        public float SpawnChance => spawnChance;
 
         /// <summary>Gets visual prefab owned by <see cref="Game.GamePlay.Heroes.HeroView"/>.</summary>
         public WeaponView Prefab => prefab;

@@ -1,58 +1,138 @@
 using System;
+using System.Collections.Generic;
 using Core.ServicesManager;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 namespace Game.Weapons
 {
-    /// <summary>Owns currently equipped weapon and reports successful weapon changes.</summary>
+    /// <summary>Authoritative runtime owner for equipped weapons, pickups, and durability.</summary>
     public class WeaponsService : IService
     {
-        /// <inheritdoc/>
+        private readonly Dictionary<int, SpawnedWeaponState> _spawned =
+            new Dictionary<int, SpawnedWeaponState>();
+        private EquippedWeaponState _state = EquippedWeaponState.Unarmed;
+        private float _nextSpawn;
+        private int _nextId;
         public Type[] GetDependencies() => null;
-
-        /// <summary>Gets equipped weapon, or <see langword="null"/> when catalog is empty or service reset.</summary>
-        public WeaponConfig CurrentWeapon { get; private set; }
-
-        /// <summary>Raised after <see cref="CurrentWeapon"/> changes; payload is new configuration.</summary>
+        public WeaponConfig CurrentWeapon => _state.IsArmed ? _state.Weapon : null;
+        public EquippedWeaponState CurrentWeaponState => _state;
+        public IReadOnlyDictionary<int, SpawnedWeaponState> SpawnedWeapons => _spawned;
         public event Action<WeaponConfig> OnWeaponChanged;
+        public event Action<EquippedWeaponState> OnWeaponStateChanged;
+        public event Action<SpawnedWeaponState> OnWeaponSpawned;
+        public event Action<int> OnWeaponRemoved;
 
-        /// <inheritdoc/>
         public UniTask<bool> Initialize()
         {
-            if (WeaponsConfig.Instance.Weapons.Count > 0)
-            {
-                CurrentWeapon = WeaponsConfig.Instance.Weapons[0];
-            }
-
+            _spawned.Clear();
+            _nextId = 0;
+            _nextSpawn = Time.time;
+            _state = EquippedWeaponState.Unarmed;
             return UniTask.FromResult(true);
         }
 
-        /// <inheritdoc/>
         public UniTask Reset()
         {
-            CurrentWeapon = null;
+            Clear();
+            Set(EquippedWeaponState.Unarmed, true);
             return UniTask.CompletedTask;
         }
 
-        /// <summary>Equips configured weapon selected by identifier.</summary>
-        /// <param name="weaponId">Identifier from <see cref="WeaponConfig.Id"/>.</param>
-        /// <returns>
-        /// <see langword="true"/> when matching weapon was equipped; otherwise
-        /// <see langword="false"/> without an event.
-        /// </returns>
-        public bool SwitchWeapon(string weaponId)
+        public void Tick(float time, Vector3 center, bool alive)
         {
-            WeaponConfig newWeapon = WeaponsConfig.Instance.GetWeaponById(weaponId);
-
-            if (newWeapon == null)
+            if (!alive || time < _nextSpawn)
+                return;
+            _nextSpawn = time + WeaponsConfig.Instance.SpawnInterval;
+            if (_spawned.Count >= WeaponsConfig.Instance.MaxSpawnedWeapons)
+                return;
+            IReadOnlyList<WeaponConfig> list = WeaponsConfig.Instance.Weapons;
+            float total = 0f;
+            foreach (WeaponConfig weapon in list)
             {
-                return false;
+                if (weapon != null && weapon.MaxUses > 0 && weapon.SpawnChance > 0f)
+                    total += weapon.SpawnChance;
             }
+            if (total <= 0f)
+                return;
+            float roll = UnityEngine.Random.value * total;
+            WeaponConfig chosen = null;
+            foreach (WeaponConfig weapon in list)
+            {
+                if (weapon == null || weapon.MaxUses <= 0 || weapon.SpawnChance <= 0f)
+                    continue;
+                roll -= weapon.SpawnChance;
+                if (roll <= 0f)
+                {
+                    chosen = weapon;
+                    break;
+                }
+            }
+            if (chosen == null)
+                return;
+            float min = WeaponsConfig.Instance.MinSpawnRadius;
+            float max = WeaponsConfig.Instance.MaxSpawnRadius;
+            float radius = Mathf.Sqrt(Mathf.Lerp(min * min, max * max, UnityEngine.Random.value));
+            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            SpawnedWeaponState state = new SpawnedWeaponState(
+                _nextId++,
+                chosen,
+                center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius
+            );
+            _spawned.Add(state.Id, state);
+            OnWeaponSpawned?.Invoke(state);
+        }
 
-            CurrentWeapon = newWeapon;
-            OnWeaponChanged?.Invoke(CurrentWeapon);
-
+        public bool TryPickup(int id)
+        {
+            if (!_spawned.Remove(id, out SpawnedWeaponState pickup))
+                return false;
+            OnWeaponRemoved?.Invoke(id);
+            Equip(pickup.Weapon);
             return true;
+        }
+        public bool RegisterConfirmedAttack()
+        {
+            if (!_state.IsArmed)
+                return false;
+            int consumed = _state.ConsumedUses + 1;
+            if (consumed >= _state.MaxUses)
+                Set(EquippedWeaponState.Unarmed, true);
+            else
+                Set(new EquippedWeaponState(_state.Weapon, consumed), false);
+            return true;
+        }
+
+        public void Restart(float time)
+        {
+            Clear();
+            _nextId = 0;
+            _nextSpawn = time;
+            Set(EquippedWeaponState.Unarmed, true);
+        }
+
+        private void Equip(WeaponConfig weapon)
+        {
+            EquippedWeaponState state = weapon == null || weapon.MaxUses <= 0
+                ? EquippedWeaponState.Unarmed
+                : new EquippedWeaponState(weapon, 0);
+            Set(state, true);
+        }
+
+        private void Set(EquippedWeaponState state, bool changed)
+        {
+            _state = state;
+            if (changed)
+                OnWeaponChanged?.Invoke(CurrentWeapon);
+            OnWeaponStateChanged?.Invoke(_state);
+        }
+
+        private void Clear()
+        {
+            List<int> ids = new List<int>(_spawned.Keys);
+            _spawned.Clear();
+            foreach (int id in ids)
+                OnWeaponRemoved?.Invoke(id);
         }
     }
 }
