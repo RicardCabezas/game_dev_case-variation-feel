@@ -13,8 +13,8 @@ using UnityEngine;
 namespace Game.GamePlay.Entities
 {
     /// <summary>
-    /// Owns entity lifecycle, frame order, cross-controller routing, spawning, restart, and
-    /// presentation interfaces.
+    /// Owns entity lifecycle, frame order, cross-controller routing, enemy creation, restart,
+    /// and presentation interfaces. Wave scheduling belongs to <c>WavesService</c>.
     /// </summary>
     public sealed class EntitiesService : IService
     {
@@ -24,7 +24,7 @@ namespace Game.GamePlay.Entities
         private WeaponsService _weapons;
         private CancellationTokenSource _cancellation;
         private UniTask _loop;
-        private float _nextSpawnTime;
+        private float _enemySpacing;
         /// <summary>Gets read-only hero state and presentation events.</summary>
         public IHeroPresentationSource HeroPresentation { get; private set; }
         /// <summary>Gets read-only enemy state and presentation events.</summary>
@@ -45,15 +45,13 @@ namespace Game.GamePlay.Entities
             _enemies = new EnemiesController();
             HeroPresentation = _hero;
             EnemiesPresentation = _enemies;
-            _nextSpawnTime = Time.time + EnemiesConfig.Instance.SpawnInterval;
             _cancellation = new CancellationTokenSource();
             _loop = RunLoop(_cancellation.Token);
             return UniTask.FromResult(true);
         }
 
         /// <summary>
-        /// Restarts entity state, emits normal removals, and delays next spawn by full configured
-        /// interval.
+        /// Restarts entity state and emits normal enemy-removal notifications.
         /// </summary>
         public void RestartGame()
         {
@@ -64,7 +62,35 @@ namespace Game.GamePlay.Entities
             _joystick.DeactivateInput();
             _enemies.ClearAll(true);
             _hero.Restart();
-            _nextSpawnTime = Time.time + EnemiesConfig.Instance.SpawnInterval;
+        }
+
+        /// <summary>Sets minimum horizontal spacing used by authoritative enemy movement.</summary>
+        /// <param name="enemySpacing">World-unit spacing; negative values clamp to zero.</param>
+        public void ConfigureEnemySpacing(float enemySpacing)
+        {
+            _enemySpacing = Mathf.Max(0f, enemySpacing);
+        }
+
+        /// <summary>Creates one enemy through authoritative entity ownership.</summary>
+        /// <param name="config">Enemy type requested by an external scheduler.</param>
+        /// <param name="maximumConcurrentEnemies">Current wave cap; values below one reject creation.</param>
+        /// <returns>
+        /// <see langword="true"/> after IDs, capacity, placement, state, and spawn notification
+        /// commit; otherwise <see langword="false"/> for invalid input, a dead hero, or no capacity.
+        /// </returns>
+        public bool TrySpawnEnemy(EnemyConfig config, int maximumConcurrentEnemies)
+        {
+            if (_hero == null || _hero.CurrentState.IsDead)
+            {
+                return false;
+            }
+
+            return _enemies.TrySpawn(
+                config,
+                _hero.CurrentState.Position,
+                UnityEngine.Random.Range(0f, Mathf.PI * 2f),
+                maximumConcurrentEnemies
+            );
         }
 
         /// <inheritdoc/>
@@ -118,26 +144,11 @@ namespace Game.GamePlay.Entities
                     _hero.ConfirmAttack(heroAttack, time);
                 }
 
-                if (time >= _nextSpawnTime)
-                {
-
-                    if (EnemiesConfig.Instance.Enemies.Count > 0 && !_hero.CurrentState.IsDead)
-                    {
-                        _enemies.TrySpawn(
-                            EnemiesConfig.Instance.Enemies[0],
-                            _hero.CurrentState.Position,
-                            UnityEngine.Random.Range(0f, Mathf.PI * 2f)
-                        );
-                    }
-
-                    _nextSpawnTime = time + EnemiesConfig.Instance.SpawnInterval;
-                }
-
                 IReadOnlyList<EnemyAttackRequest> attacks = _enemies.CollectAttackRequests(
                     _hero.CurrentState,
                     time
                 );
-                _enemies.Tick(_hero.CurrentState, Time.deltaTime);
+                _enemies.Tick(_hero.CurrentState, Time.deltaTime, _enemySpacing);
 
                 foreach (var request in attacks)
                 {

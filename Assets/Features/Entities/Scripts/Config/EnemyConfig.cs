@@ -27,7 +27,11 @@ namespace Game.GamePlay.Enemies
         [SerializeField]
         private EnemyView prefab;
 
-        /// <summary>Gets stable content identifier used by <see cref="EnemiesConfig.GetEnemyById"/>.</summary>
+        [SerializeField]
+        [Min(0f)]
+        private float spawnRadius = 10f;
+
+        /// <summary>Gets stable content identifier for authored content.</summary>
         public string Id => id;
 
         /// <summary>Gets health assigned to each spawned enemy.</summary>
@@ -44,6 +48,9 @@ namespace Game.GamePlay.Enemies
 
         /// <summary>Gets world-unit distance at which enemy stops chasing and may attack.</summary>
         public float AttackRange => attackRange;
+
+        /// <summary>Gets world-unit radius around hero used when this enemy is created.</summary>
+        public float SpawnRadius => spawnRadius;
 
         /// <summary>Gets presentation prefab instantiated by <see cref="EnemiesContainerView"/>.</summary>
         public EnemyView Prefab => prefab;
