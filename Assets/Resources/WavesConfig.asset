@@ -11,30 +11,30 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3a99fd1b6dac44a381f6f68d1609b84e, type: 3}
   m_Name: WavesConfig
-  m_EditorClassIdentifier:
-  enemySpacing: 1
+  m_EditorClassIdentifier: 
   waves:
   - startDelay: 2
     spawnInterval: 2
     maximumConcurrentEnemies: 20
     enemyGroups:
     - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
-      amount: 5
+      amount: 2
   - startDelay: 3
     spawnInterval: 1.5
     maximumConcurrentEnemies: 20
     enemyGroups:
     - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
-      amount: 5
+      amount: 1
     - enemy: {fileID: 11400000, guid: 72575589acde143858765603cd63d900, type: 2}
-      amount: 5
+      amount: 2
   - startDelay: 3
     spawnInterval: 1
     maximumConcurrentEnemies: 20
     enemyGroups:
     - enemy: {fileID: 11400000, guid: be561b41b0b37406281685f0daceaa81, type: 2}
-      amount: 5
+      amount: 1
     - enemy: {fileID: 11400000, guid: 72575589acde143858765603cd63d900, type: 2}
-      amount: 5
+      amount: 1
     - enemy: {fileID: 11400000, guid: 550201fa841244b37ab7912b243a2e6a, type: 2}
-      amount: 3
+      amount: 1
+  enemySpacing: 2
