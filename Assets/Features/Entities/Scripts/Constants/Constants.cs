@@ -15,7 +15,7 @@ namespace Game.GamePlay.Entities
                 /// <summary>Trigger parameter for hero attack presentation.</summary>
                 public const string Attack = "Attack";
 
-                /// <summary>Trigger parameter for hero death presentation.</summary>
+                /// <summary>Boolean parameter that keeps hero death presentation active until restart.</summary>
                 public const string Death = "Death";
             }
 
@@ -30,6 +30,9 @@ namespace Game.GamePlay.Entities
 
                 /// <summary>Trigger parameter for enemy attack presentation.</summary>
                 public const string Attack = "Attack";
+
+                /// <summary>Trigger parameter for enemy death presentation.</summary>
+                public const string Death = "Death";
             }
         }
     }

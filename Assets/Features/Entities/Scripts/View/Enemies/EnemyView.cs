@@ -20,6 +20,9 @@ namespace Game.GamePlay.Enemies
         private static readonly int AttackHash = Animator.StringToHash(
             Constants.Animator.Bee.Attack
         );
+        private static readonly int DeathHash = Animator.StringToHash(
+            Constants.Animator.Bee.Death
+        );
 
         [SerializeField]
         private Animator animator;
@@ -31,6 +34,7 @@ namespace Game.GamePlay.Enemies
         private float rotationSpeed = 10f;
 
         private IHeroPresentationSource _heroPresentation;
+        private bool _isDying;
 
         private void Awake()
         {
@@ -54,7 +58,7 @@ namespace Game.GamePlay.Enemies
 
         private void Update()
         {
-            if (_heroPresentation == null || _heroPresentation.CurrentState.IsDead)
+            if (_isDying || _heroPresentation == null || _heroPresentation.CurrentState.IsDead)
             {
                 return;
             }
@@ -86,6 +90,23 @@ namespace Game.GamePlay.Enemies
         {
             animator?.SetTrigger(DamageHash);
             hitFlashView?.Play();
+        }
+
+        /// <summary>Plays lethal-hit presentation and freezes enemy-facing updates.</summary>
+        public void PlayDeath()
+        {
+            _isDying = true;
+            hitFlashView?.Play();
+
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.SetBool(IsMovingHash, false);
+            animator.ResetTrigger(DamageHash);
+            animator.ResetTrigger(AttackHash);
+            animator.SetTrigger(DeathHash);
         }
 
         /// <summary>Plays attack presentation for controller-reported enemy attack.</summary>

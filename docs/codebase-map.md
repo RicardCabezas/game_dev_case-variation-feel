@@ -55,7 +55,7 @@ Controllers and UI controllers are plain C# and must not depend on sibling contr
 4. `WavesService` owns a separate Update loop. It applies shared wave spacing to entities, starts each authored wave after its `StartDelay`, requests one batch-ordered spawn per `SpawnInterval`, and routes the requested enemy type plus current wave cap through `EntitiesService.TrySpawnEnemy`; entities retain IDs, cap enforcement, random placement using each enemy's spawn radius, state insertion, and spawn events.
 5. After a wave's pending spawns reach zero, `WaveController` enters clearing and advances only after every enemy it confirmed through entity lifecycle events is removed. Failed entity creation keeps that spawn pending and retries after the current wave interval. Empty or invalid authored entries are skipped; final clear completes the run.
 6. `EntitiesService` separately collects eligible enemy attack requests in stable ID order, advances movement and spacing through `EnemiesController.Tick`, then routes attacks. Accepted attacks are confirmed only after hero damage; remaining queued attacks stop after hero death.
-7. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal.
+7. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal. Enemy views may keep that removed identity visible for the one-second Bee death clip, but it no longer participates in gameplay or UI state.
 8. `WavesService.RestartGame()` first resets wave state to wave zero, then calls `EntitiesService.RestartGame()`, which deactivates joystick, removes enemies normally, resets IDs and hero timing/state, and publishes restart snapshot. Old removal events cannot advance restarted waves.
 
 No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, loot, or win-condition path exists in the inspected runtime source.
@@ -70,7 +70,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `IHeroPresentationSource.OnHeroHit` | Accepted incoming damage; self-sufficient `HeroHitResult` with health, position, and lethality | Hero view, health-bar adapter, death UI |
 | `IHeroPresentationSource.OnAttackPerformed` / `OnAttackCooldownStarted` | Confirmed attack target / cooldown duration | Hero view and auto-attack indicator adapter |
 | `IHeroPresentationSource.OnRestarted` | Hero reset commit; restored `HeroState` | Hero view and UI service adapters |
-| `IEnemiesPresentationSource` events | Spawn, movement, self-sufficient hit, confirmed attack, removal | Enemy views and health-bar adapter |
+| `IEnemiesPresentationSource` events | Spawn, movement, self-sufficient hit, confirmed attack, authoritative removal | Enemy views and health-bar adapter |
 | `IWavesPresentationSource.OnStateChanged` | Complete `WaveState` replacement after wave start, accepted/rejected spawn, tracked removal, transition, completion, or restart | Wave-state UI view |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
 | `AutoAttackIndicatorController.OnStateChanged` | Complete indicator state replacement | Indicator view starts or hides fill |
@@ -78,7 +78,7 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
 | `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
 
-`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. `HeroView` drives the hero `Speed`, `Attack`, and lethal-hit `Death` animator parameters. `EnemyView` owns facing, Bee `IsMoving`, `Attack`, and `Damage` presentation. Bee death animation state has no current runtime driver.
+`HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; restart clears `Death` and returns the Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after the one-second clip; ordinary removal destroys immediately.
 
 ## Configuration and content selection
 

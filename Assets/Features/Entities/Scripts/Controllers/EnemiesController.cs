@@ -23,7 +23,7 @@ namespace Game.GamePlay.Enemies
         public IReadOnlyDictionary<int, EnemyState> CurrentStates => _enemies;
         /// <summary>Raised after an enemy enters tracking.</summary>
         public event Action<EnemyState> OnEnemySpawned;
-        /// <summary>Raised after an enemy leaves tracking.</summary>
+        /// <summary>Raised after an enemy leaves authoritative tracking.</summary>
         public event Action<int> OnEnemyRemoved;
         /// <summary>Raised after an enemy position changes.</summary>
         public event Action<EnemyState> OnEnemyPositionChanged;
