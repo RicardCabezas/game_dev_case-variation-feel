@@ -35,7 +35,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | Owner | State and decisions | Main consumers |
 | --- | --- | --- |
 | `JoystickInputService` | Touch/mouse polling and `JoystickState` | `EntitiesService`, `JoystickView`, auto-attack adapter |
-| `WeaponsService` | Equipped `WeaponConfig`; index-zero startup selection | `EntitiesService`, `HeroView` |
+| `WeaponsService` | Equipped weapon durability; weighted pickup scheduling, state, and arena-bounded placement | `EntitiesService`, weapon and hero views |
 | `WorldService` | Instantiated persistent `WorldView` lifetime | Hero container |
 | `EntitiesService` | Entity loop, lifecycle, combat routing, enemy creation/placement/capacity, restart, presentation sources | Gameplay/UI views and adapters |
 | `HeroController` | Internal hero position, health, bounded arena movement/attack mode, target selection, cooldown, read-only presentation events | Exposed only as `IHeroPresentationSource` |
@@ -46,6 +46,8 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
 
 Controllers and UI controllers are plain C# and must not depend on sibling controllers, gameplay services, reader presentation sources, views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Services own source subscriptions; views retain publisher references and unsubscribe in `OnDestroy`.
+
+`Assets/Core/Constants/Scripts/Game.Constants.asmdef` contains shared gameplay constants. `Game.Entities` and `Game.Weapons` both reference it; the feature assemblies do not reference each other.
 
 ## Gameplay flow
 
@@ -80,13 +82,16 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 
 `HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `HeroView` owns transform, rotation, hero Animator, and instantiated weapon presentation. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; restart clears `Death` and returns the Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after the one-second clip; ordinary removal destroys immediately.
 
+`WeaponUsesIndicatorView` displays weapon-use state and selects the sword icon while armed, or the empty-hand icon while unarmed.
+
 ## Configuration and content selection
 
 - `ScriptableObjectSingleton<T>` lazily loads a Resources asset named after its concrete type and logs an error if absent.
 - `HeroConfig` supplies prefab, initial health, and movement speed.
 - `WavesConfig` supplies shared enemy spacing and ordered wave definitions. Each definition supplies first-spawn delay, retry/spawn interval, concurrent-enemy cap, and ordered `EnemyConfig` batches with counts; direct entries select runtime enemy types.
 - `EnemyConfig` supplies combat/presentation properties and its own world-unit spawn radius.
-- `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab. `WeaponsService` starts with catalog index zero; `SwitchWeapon` uses `WeaponsConfig.GetWeaponById`.
+- `WeaponConfig` supplies ID, damage, range, cooldown, and weapon view prefab.
+- `WeaponsConfig` supplies pickup spawn interval, minimum/maximum radius around supplied center, maximum active pickups, and pickup prefab. `WeaponsService` selects eligible entries by configured spawn chance and clamps pickup X/Z positions to `Constants.World.ArenaLimit`.
 - `WorldConfig` and `BiomeConfig` supply prefabs instantiated by their owning service/container.
 
 Configuration assets may contain entries not selected by the current startup or spawn paths. Catalog membership alone does not prove runtime use.
@@ -94,3 +99,4 @@ Configuration assets may contain entries not selected by the current startup or 
 ## Documentation maintenance
 
 Update this page with affected static facts only. Keep performance evidence, historical assessment, architectural intent, and proposals separate from current-source claims. Archived initial assessment lives under `docs/analysis/initial_assessment/` and is not maintained as current documentation.
+* `Game.Weapons.WeaponsService` is authoritative for equipped durability and spawned pickup state.

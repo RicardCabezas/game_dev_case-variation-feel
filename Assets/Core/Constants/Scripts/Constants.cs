@@ -1,6 +1,6 @@
 namespace Game.GamePlay.Entities
 {
-    /// <summary>Centralized animator parameter names used by entity presentation.</summary>
+    /// <summary>Shared animator parameter names and gameplay world limits.</summary>
     public static class Constants
     {
         /// <summary>Animator parameter groups.</summary>
@@ -38,7 +38,7 @@ namespace Game.GamePlay.Entities
 
         public static class World
         {
-                /// <summary>World-unit limit for arena boundaries. Used just for convinience in this very small project, a bit hacky</summary>
+            /// <summary>Inclusive X/Z world-unit limit for arena boundaries and spawned gameplay objects.</summary>
             public const float ArenaLimit = 14.3f;
         }
     }

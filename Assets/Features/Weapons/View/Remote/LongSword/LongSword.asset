@@ -16,4 +16,7 @@ MonoBehaviour:
   damage: 50
   range: 5
   cooldown: 2
+  displayName: Long Sword
+  maxUses: 4
+  spawnChance: 0.2
   prefab: {fileID: -3291902027411944700, guid: bac79aa2a0057e5429a664d3f336da3d, type: 3}

@@ -62,6 +62,7 @@ namespace Game.GamePlay.Entities
             _joystick.DeactivateInput();
             _enemies.ClearAll(true);
             _hero.Restart();
+            _weapons.Restart(Time.time);
         }
 
         /// <summary>Sets minimum horizontal spacing used by authoritative enemy movement.</summary>
@@ -140,6 +141,7 @@ namespace Game.GamePlay.Entities
                     time,
                     Time.deltaTime
                 );
+                _weapons.Tick(time, _hero.CurrentState.Position, !_hero.CurrentState.IsDead);
 
                 if (_hero.TryCreateAttackRequest(
                         _weapons.CurrentWeapon,
@@ -151,6 +153,7 @@ namespace Game.GamePlay.Entities
                 )
                 {
                     _hero.ConfirmAttack(heroAttack, time);
+                    _weapons.RegisterConfirmedAttack();
                 }
 
                 IReadOnlyList<EnemyAttackRequest> attacks = _enemies.CollectAttackRequests(

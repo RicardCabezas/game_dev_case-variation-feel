@@ -19,3 +19,4 @@ While joystick input is active, `HeroController` moves. When input becomes inact
 ## Evidence status
 
 Source code is authoritative for current static behavior and public contracts. The current codebase map records verified source facts. Initial-assessment pages are preserved historical analysis; performance numbers are capture-specific measurements, and proposals are not evidence that behavior exists.
+Weapons runtime owns timed floor pickups, weighted selection, replacement, and durability exhaustion; UI observes immutable weapon-use state.

@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace Game.UI
 {
+    /// <summary>Read-only current weapon durability state and events.</summary>
+    public interface IWeaponUsesIndicatorPresentationSource
+    {
+        WeaponUsesIndicatorState CurrentState { get; }
+        event Action<WeaponUsesIndicatorState> OnStateChanged;
+    }
     /// <summary>Read-only automatic-attack indicator state and events.</summary>
     public interface IAutoAttackIndicatorPresentationSource
     {

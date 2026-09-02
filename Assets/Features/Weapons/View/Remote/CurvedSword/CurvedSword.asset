@@ -16,4 +16,7 @@ MonoBehaviour:
   damage: 15
   range: 2
   cooldown: 0.5
+  displayName: Curved Sword
+  maxUses: 10
+  spawnChance: 0.5
   prefab: {fileID: -654538669453326304, guid: 4d0814cafad460246890ec829fa7071d, type: 3}

@@ -147,3 +147,4 @@ I also added architecture guidance, a maintained codebase map, XML API comments,
 | #19 | `e89498533d66b6038171b6554d3290ee5aa8d5c9` | Yes |
 | #20 | `182224ad1548e88fb0769cac8241293b9928ce8a` | Yes |
 <!-- pr-readme-evaluator:end -->
+Weapon pickups spawn around the hero on a timed cadence. Collected weapons replace the held weapon and consume one durability use per confirmed hit.

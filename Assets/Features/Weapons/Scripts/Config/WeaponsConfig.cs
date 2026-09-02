@@ -11,29 +11,19 @@ namespace Game.Weapons
         [SerializeField]
         [Tooltip("List of all available weapons in the game")]
         private List<WeaponConfig> weapons;
+        [SerializeField, Min(0f)] private float spawnInterval = 10f;
+        [SerializeField, Min(0f)] private float minSpawnRadius = 3f;
+        [SerializeField, Min(0f)] private float maxSpawnRadius = 15f;
+        [SerializeField, Min(0)] private int maxSpawnedWeapons = 5;
+        [SerializeField] private WeaponPickupView pickupPrefab;
 
         /// <summary>Gets configured weapons in authoring order.</summary>
         public IReadOnlyList<WeaponConfig> Weapons => weapons;
+        public float SpawnInterval => spawnInterval;
+        public float MinSpawnRadius => minSpawnRadius;
+        public float MaxSpawnRadius => Mathf.Max(minSpawnRadius, maxSpawnRadius);
+        public int MaxSpawnedWeapons => maxSpawnedWeapons;
+        public WeaponPickupView PickupPrefab => pickupPrefab;
 
-        private Dictionary<string, WeaponConfig> _weaponCache;
-
-        /// <summary>Finds configured weapon by content identifier.</summary>
-        /// <param name="weaponId">Identifier from <see cref="WeaponConfig.Id"/>.</param>
-        /// <returns>Matching configuration, or <see langword="null"/> when no match exists.</returns>
-        public WeaponConfig GetWeaponById(string weaponId)
-        {
-            if (_weaponCache == null)
-            {
-                _weaponCache = new Dictionary<string, WeaponConfig>();
-
-                foreach (WeaponConfig weapon in weapons)
-                {
-                    _weaponCache[weapon.Id] = weapon;
-                }
-            }
-
-            _weaponCache.TryGetValue(weaponId, out WeaponConfig weaponConfig);
-            return weaponConfig;
-        }
     }
 }
