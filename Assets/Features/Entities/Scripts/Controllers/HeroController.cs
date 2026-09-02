@@ -193,6 +193,16 @@ namespace Game.GamePlay.Heroes
 
         private void SetPosition(Vector3 position)
         {
+            position.x = Mathf.Clamp(
+                position.x,
+                -Constants.World.ArenaLimit,
+                Constants.World.ArenaLimit
+            );
+            position.z = Mathf.Clamp(
+                position.z,
+                -Constants.World.ArenaLimit,
+                Constants.World.ArenaLimit
+            );
             _currentState = new HeroState(
                 position,
                 _currentState.Health,

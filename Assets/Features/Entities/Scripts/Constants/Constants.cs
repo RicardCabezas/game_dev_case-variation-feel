@@ -35,5 +35,11 @@ namespace Game.GamePlay.Entities
                 public const string Death = "Death";
             }
         }
+
+        public static class World
+        {
+                /// <summary>World-unit limit for arena boundaries. Used just for convinience in this very small project, a bit hacky</summary>
+            public const float ArenaLimit = 14.3f;
+        }
     }
 }

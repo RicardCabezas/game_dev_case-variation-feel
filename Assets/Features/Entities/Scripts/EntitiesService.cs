@@ -85,12 +85,21 @@ namespace Game.GamePlay.Entities
                 return false;
             }
 
-            return _enemies.TrySpawn(
-                config,
-                _hero.CurrentState.Position,
-                UnityEngine.Random.Range(0f, Mathf.PI * 2f),
-                maximumConcurrentEnemies
+            Vector3 position = _hero.CurrentState.Position;
+            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            position += new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * config.SpawnRadius;
+            position.x = Mathf.Clamp(
+                position.x,
+                -Constants.World.ArenaLimit,
+                Constants.World.ArenaLimit
             );
+            position.z = Mathf.Clamp(
+                position.z,
+                -Constants.World.ArenaLimit,
+                Constants.World.ArenaLimit
+            );
+
+            return _enemies.TrySpawn(config, position, maximumConcurrentEnemies);
         }
 
         /// <inheritdoc/>

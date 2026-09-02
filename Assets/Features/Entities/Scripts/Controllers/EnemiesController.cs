@@ -37,8 +37,7 @@ namespace Game.GamePlay.Enemies
         /// <returns><see langword="true"/> after authoritative state and spawn notification commit.</returns>
         public bool TrySpawn(
             EnemyConfig config,
-            Vector3 heroPosition,
-            float angleRadians,
+            Vector3 position,
             int maximumConcurrentEnemies
         )
         {
@@ -51,10 +50,6 @@ namespace Game.GamePlay.Enemies
                 return false;
             }
 
-            var position =
-                heroPosition
-                + new Vector3(Mathf.Cos(angleRadians), 0f, Mathf.Sin(angleRadians))
-                    * config.SpawnRadius;
             var state = new EnemyState(
                 _nextEnemyId++,
                 position,
