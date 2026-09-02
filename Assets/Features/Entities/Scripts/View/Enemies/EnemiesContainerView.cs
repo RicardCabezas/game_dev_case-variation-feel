@@ -18,7 +18,7 @@ namespace Game.GamePlay.Enemies
 
         private IEnemiesPresentationSource _enemiesPresentation;
         private Dictionary<int, EnemyView> _enemyViews;
-        private HashSet<int> _lethalEnemyIds;
+        private HashSet<int> _deadEnemyIds;
 
         private void Start()
         {
@@ -31,7 +31,7 @@ namespace Game.GamePlay.Enemies
                 .Instance.GetService<EntitiesService>()
                 .EnemiesPresentation;
             _enemyViews = new Dictionary<int, EnemyView>();
-            _lethalEnemyIds = new HashSet<int>();
+            _deadEnemyIds = new HashSet<int>();
 
             _enemiesPresentation.OnEnemySpawned += OnEnemySpawned;
             _enemiesPresentation.OnEnemyRemoved += OnEnemyRemoved;
@@ -39,7 +39,7 @@ namespace Game.GamePlay.Enemies
             _enemiesPresentation.OnEnemyHit += OnEnemyHit;
             _enemiesPresentation.OnEnemyAttackPerformed += OnEnemyAttackPerformed;
 
-            foreach (KeyValuePair<int, EnemyState> pair in _enemiesPresentation.CurrentStates)
+            foreach (var pair in _enemiesPresentation.CurrentStates)
             {
                 OnEnemySpawned(pair.Value);
             }
@@ -47,18 +47,18 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemySpawned(EnemyState enemyState)
         {
-            EnemyView enemyView = Instantiate(enemyState.Config.Prefab, transform);
+            var enemyView = Instantiate(enemyState.Config.Prefab, transform);
             enemyView.transform.position = enemyState.Position;
             _enemyViews[enemyState.Id] = enemyView;
         }
 
         private void OnEnemyRemoved(int enemyId)
         {
-            bool wasLethal = _lethalEnemyIds.Remove(enemyId);
+            var isDead = _deadEnemyIds.Remove(enemyId);
 
-            if (_enemyViews.Remove(enemyId, out EnemyView enemyView))
+            if (_enemyViews.Remove(enemyId, out var enemyView))
             {
-                if (wasLethal)
+                if (isDead)
                 {
                     Destroy(enemyView.gameObject, EnemyDeathAnimationDuration);
                 }
@@ -71,7 +71,7 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyPositionChanged(EnemyState enemyState)
         {
-            if (_enemyViews.TryGetValue(enemyState.Id, out EnemyView enemyView))
+            if (_enemyViews.TryGetValue(enemyState.Id, out var enemyView))
             {
                 enemyView.SetPosition(enemyState.Position);
             }
@@ -79,11 +79,11 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyHit(EnemyHitResult hitResult)
         {
-            if (_enemyViews.TryGetValue(hitResult.EnemyId, out EnemyView enemyView))
+            if (_enemyViews.TryGetValue(hitResult.EnemyId, out var enemyView))
             {
                 if (hitResult.IsLethal)
                 {
-                    _lethalEnemyIds.Add(hitResult.EnemyId);
+                    _deadEnemyIds.Add(hitResult.EnemyId);
                     enemyView.PlayDeath();
                 }
                 else
@@ -95,7 +95,7 @@ namespace Game.GamePlay.Enemies
 
         private void OnEnemyAttackPerformed(int enemyId)
         {
-            if (_enemyViews.TryGetValue(enemyId, out EnemyView enemyView))
+            if (_enemyViews.TryGetValue(enemyId, out var enemyView))
             {
                 enemyView.PlayAttack();
             }
