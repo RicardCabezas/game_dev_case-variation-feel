@@ -1,8 +1,8 @@
 using Core.ServicesManager;
-using Game.World;
+using Game.GamePlay.Heroes;
 using UnityEngine;
 
-namespace Game.GamePlay.Heroes
+namespace Game.World
 {
     /// <summary>Presentation container that instantiates hero and assigns world camera follow target.</summary>
     /// <remarks>Owns no hero gameplay decisions.</remarks>

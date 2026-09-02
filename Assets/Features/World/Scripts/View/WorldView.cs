@@ -1,6 +1,7 @@
 using Core.ServicesManager;
 using Cinemachine;
 using Game.Entities;
+using Game.GamePlay.Entities;
 using Game.GamePlay.Heroes;
 using UnityEngine;
 

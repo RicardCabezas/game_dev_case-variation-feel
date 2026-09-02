@@ -47,7 +47,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 
 Controllers and UI controllers are plain C# and must not depend on sibling controllers, gameplay services, reader presentation sources, views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Services own source subscriptions; views retain publisher references and unsubscribe in `OnDestroy`.
 
-`Assets/Core/Constants/Scripts/Game.Constants.asmdef` contains shared gameplay constants. `Game.Entities` and `Game.Weapons` both reference it; the feature assemblies do not reference each other.
+`Assets/Core/Constants/Scripts/Game.Constants.asmdef` contains shared gameplay constants. `Game.Entities` and `Game.Weapons` both reference it. `Game.World` references `Game.Entities` for hero/camera presentation; entity gameplay does not depend on world presentation.
 
 ## Gameplay flow
 
