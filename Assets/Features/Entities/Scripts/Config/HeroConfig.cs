@@ -19,6 +19,14 @@ namespace Game.GamePlay.Heroes
         [Tooltip("Initial health of the hero")]
         private int initialHealth = 100;
 
+        [SerializeField]
+        [Tooltip("World-unit distance travelled by one valid consumable dash")]
+        private float dashDistance = 4f;
+
+        [SerializeField]
+        [Tooltip("World-unit radius around dash path that damages enemies")]
+        private float dashHitRadius = 1f;
+
         /// <summary>Gets hero presentation prefab instantiated by <see cref="HeroContainerView"/>.</summary>
         public HeroView HeroPrefab => heroPrefab;
 
@@ -27,5 +35,11 @@ namespace Game.GamePlay.Heroes
 
         /// <summary>Gets health assigned on controller initialization and restart.</summary>
         public int InitialHealth => initialHealth;
+
+        /// <summary>Gets world-unit distance travelled by one valid consumable dash.</summary>
+        public float DashDistance => Mathf.Max(0f, dashDistance);
+
+        /// <summary>Gets world-unit radius of dash path enemy hits.</summary>
+        public float DashHitRadius => Mathf.Max(0f, dashHitRadius);
     }
 }

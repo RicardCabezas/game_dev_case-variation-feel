@@ -11,20 +11,31 @@ namespace Game.JoystickInput
     {
         /// <summary>Raised only when joystick state changes; payload is complete replacement state.</summary>
         public event Action<JoystickState> OnStateChanged;
+        /// <summary>Raised on valid secondary release; payload is normalized screen input direction.</summary>
+        public event Action<Vector2> OnSecondaryInputReleased;
 
         private JoystickState _currentState;
         private CancellationTokenSource _cancellationTokenSource;
+        private float _lastNormalReleaseTime = float.NegativeInfinity;
+        private float _normalPressTime = float.NegativeInfinity;
 
         /// <summary>Gets current input snapshot.</summary>
         public JoystickState CurrentState => _currentState;
 
-        /// <summary>Forces inactive input and emits only when current state changes.</summary>
-        public void DeactivateInput() => UpdateState(JoystickState.Inactive);
+        /// <summary>Forces inactive input, clears pending double-tap state, and emits only when state changes.</summary>
+        public void DeactivateInput()
+        {
+            _lastNormalReleaseTime = float.NegativeInfinity;
+            _normalPressTime = float.NegativeInfinity;
+            UpdateState(JoystickState.Inactive);
+        }
 
         /// <inheritdoc/>
         public UniTask<bool> Initialize()
         {
             _currentState = JoystickState.Inactive;
+            _lastNormalReleaseTime = float.NegativeInfinity;
+            _normalPressTime = float.NegativeInfinity;
             _cancellationTokenSource = new CancellationTokenSource();
 
             UpdateLoop(_cancellationTokenSource.Token).Forget();
@@ -77,23 +88,61 @@ namespace Game.JoystickInput
 
             if (isPressed)
             {
-                UpdateState(new JoystickState(inputPosition, Vector2.zero, true));
+                bool secondaryInput = Time.time - _lastNormalReleaseTime
+                    <= JoystickInputConfig.Instance.SecondTapWindow;
+                _lastNormalReleaseTime = float.NegativeInfinity;
+                _normalPressTime = secondaryInput ? float.NegativeInfinity : Time.time;
+                UpdateState(
+                    new JoystickState(
+                        inputPosition,
+                        Vector2.zero,
+                        true,
+                        secondaryInput ? JoystickInputMode.Secondary : JoystickInputMode.Normal
+                    )
+                );
             }
             else if (isReleased)
             {
+                if (_currentState.Mode == JoystickInputMode.Secondary)
+                {
+                    Vector2 direction = GetMovementVector(inputPosition);
+                    if (direction.magnitude >= JoystickInputConfig.Instance.SecondaryMinimumInputMagnitude)
+                    {
+                        OnSecondaryInputReleased?.Invoke(direction.normalized);
+                    }
+                }
+                else
+                {
+                    _lastNormalReleaseTime = Time.time - _normalPressTime
+                        <= JoystickInputConfig.Instance.SecondTapWindow
+                        ? Time.time
+                        : float.NegativeInfinity;
+                }
                 UpdateState(JoystickState.Inactive);
             }
             else if (hasInput && _currentState.IsActive)
             {
-                float maxRadius = JoystickInputConfig.Instance.MaxRadius;
-                Vector2 delta = inputPosition - _currentState.JoystickCenter;
-                Vector2 clampedDelta = Vector2.ClampMagnitude(delta, maxRadius);
-                Vector2 normalizedMovement = clampedDelta / maxRadius;
-
                 UpdateState(
-                    new JoystickState(_currentState.JoystickCenter, normalizedMovement, true)
+                    new JoystickState(
+                        _currentState.JoystickCenter,
+                        GetMovementVector(inputPosition),
+                        true,
+                        _currentState.Mode
+                    )
                 );
             }
+        }
+
+        private Vector2 GetMovementVector(Vector2 inputPosition)
+        {
+            float maxRadius = JoystickInputConfig.Instance.MaxRadius;
+            if (maxRadius <= 0f)
+            {
+                return Vector2.zero;
+            }
+
+            Vector2 delta = inputPosition - _currentState.JoystickCenter;
+            return Vector2.ClampMagnitude(delta, maxRadius) / maxRadius;
         }
 
         private void UpdateState(JoystickState newState)

@@ -25,6 +25,8 @@ namespace Game.GamePlay.Entities
         private CancellationTokenSource _cancellation;
         private UniTask _loop;
         private float _enemySpacing;
+        private bool _hasPendingDash;
+        private Vector2 _pendingDashDirection;
         /// <summary>Gets read-only hero state and presentation events.</summary>
         public IHeroPresentationSource HeroPresentation { get; private set; }
         /// <summary>Gets read-only enemy state and presentation events.</summary>
@@ -41,6 +43,7 @@ namespace Game.GamePlay.Entities
         {
             _joystick = ServicesLocator.Instance.GetService<JoystickInputService>();
             _weapons = ServicesLocator.Instance.GetService<WeaponsService>();
+            _joystick.OnSecondaryInputReleased += OnSecondaryInputReleased;
             _hero = new HeroController();
             _enemies = new EnemiesController();
             HeroPresentation = _hero;
@@ -60,6 +63,7 @@ namespace Game.GamePlay.Entities
                 return;
             }
             _joystick.DeactivateInput();
+            _hasPendingDash = false;
             _enemies.ClearAll(true);
             _hero.Restart();
             _weapons.Restart(Time.time);
@@ -120,6 +124,10 @@ namespace Game.GamePlay.Entities
             _enemies?.ClearAll(true);
             _hero?.ClearPresentationSubscribers();
             _enemies?.ClearPresentationSubscribers();
+            if (_joystick != null)
+            {
+                _joystick.OnSecondaryInputReleased -= OnSecondaryInputReleased;
+            }
             _hero = null;
             _enemies = null;
             HeroPresentation = null;
@@ -141,9 +149,10 @@ namespace Game.GamePlay.Entities
                     time,
                     Time.deltaTime
                 );
+                bool dashCommitted = TryResolvePendingDash();
                 _weapons.Tick(time, _hero.CurrentState.Position, !_hero.CurrentState.IsDead);
 
-                if (_hero.TryCreateAttackRequest(
+                if (!dashCommitted && _hero.TryCreateAttackRequest(
                         _weapons.CurrentWeapon,
                         _enemies.CurrentStates,
                         time,
@@ -177,6 +186,43 @@ namespace Game.GamePlay.Entities
                 }
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
+        }
+
+        private void OnSecondaryInputReleased(Vector2 direction)
+        {
+            _pendingDashDirection = direction;
+            _hasPendingDash = true;
+        }
+
+        private bool TryResolvePendingDash()
+        {
+            if (!_hasPendingDash)
+            {
+                return false;
+            }
+
+            _hasPendingDash = false;
+
+            if (!_hero.TryCreateDashRequest(
+                    _pendingDashDirection,
+                    _weapons.CurrentWeapon,
+                    out HeroDashRequest dash
+                ))
+            {
+                return false;
+            }
+
+            IReadOnlyList<int> hitEnemyIds = _enemies.CollectDashHitEnemyIds(
+                dash,
+                HeroConfig.Instance.DashHitRadius
+            );
+            for (var i = 0; i < hitEnemyIds.Count; i++)
+            {
+                _enemies.TryApplyDamage(hitEnemyIds[i], int.MaxValue, out _);
+            }
+
+            _weapons.DestroyEquippedWeapon();
+            return true;
         }
     }
 }

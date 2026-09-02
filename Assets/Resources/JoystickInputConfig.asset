@@ -13,3 +13,6 @@ MonoBehaviour:
   m_Name: JoystickInputConfig
   m_EditorClassIdentifier: 
   _maxRadius: 100
+  _secondTapWindow: 0.25
+  _secondaryMinimumInputMagnitude: 0.2
+  _secondaryJoystickTint: {r: 1, g: 0.35, b: 0.1, a: 1}

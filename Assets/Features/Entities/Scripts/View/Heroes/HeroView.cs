@@ -28,6 +28,10 @@ namespace Game.GamePlay.Heroes
         [SerializeField]
         private Transform weaponSlot;
 
+        [SerializeField]
+        [Tooltip("Presentation-only trail rendered across committed dash path")]
+        private TrailRenderer dashTrail;
+
         private JoystickInputService _joystickInputService;
         private IHeroPresentationSource _heroPresentation;
         private WeaponsService _weaponsService;
@@ -60,6 +64,7 @@ namespace Game.GamePlay.Heroes
             _heroPresentation.OnRestarted += OnRestarted;
             _heroPresentation.OnHeroHit += OnHeroHit;
             _heroPresentation.OnAttackPerformed += OnAttackPerformed;
+            _heroPresentation.OnDashPerformed += OnDashPerformed;
             _weaponsService.OnWeaponChanged += OnWeaponChanged;
 
             OnJoystickStateChanged(_joystickInputService.CurrentState);
@@ -82,6 +87,7 @@ namespace Game.GamePlay.Heroes
                 _heroPresentation.OnRestarted -= OnRestarted;
                 _heroPresentation.OnHeroHit -= OnHeroHit;
                 _heroPresentation.OnAttackPerformed -= OnAttackPerformed;
+                _heroPresentation.OnDashPerformed -= OnDashPerformed;
             }
 
             if (_weaponsService != null)
@@ -97,7 +103,9 @@ namespace Game.GamePlay.Heroes
 
         private void OnJoystickStateChanged(JoystickState state)
         {
-            _currentMovementInput = state.IsActive ? state.MovementVector : Vector2.zero;
+            _currentMovementInput = state.IsActive && state.Mode == JoystickInputMode.Normal
+                ? state.MovementVector
+                : Vector2.zero;
             UpdateAnimator();
         }
 
@@ -141,6 +149,28 @@ namespace Game.GamePlay.Heroes
             if (targetDirection.sqrMagnitude > 0.01f)
             {
                 transform.rotation = Quaternion.LookRotation(-targetDirection);
+            }
+
+            if (animator != null)
+            {
+                animator.SetTrigger(AttackHash);
+            }
+        }
+
+        private void OnDashPerformed(HeroDashRequest dash)
+        {
+            if (dash.Direction.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.LookRotation(-dash.Direction);
+            }
+
+            if (dashTrail != null)
+            {
+                dashTrail.Clear();
+                dashTrail.emitting = true;
+                dashTrail.AddPosition(dash.StartPosition);
+                dashTrail.AddPosition(dash.EndPosition);
+                dashTrail.emitting = false;
             }
 
             if (animator != null)
