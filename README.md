@@ -19,6 +19,11 @@ The project uses Unity `2022.3.62f2`. The assignment allowed up to eight hours. 
 | Controller boundaries | Moved entity orchestration into `EntitiesService` and exposed read-only presentation contracts | `~1 h` |
 | Shadow mesh optimization | Replaced the transparent textured quad with an opaque 16-triangle disk after profiling | `~30 min` |
 | Code quality and docs | Added architecture rules, XML documentation, Doxygen, GitHub Pages automation, and a documentation-only README pass | `[TODO: add earlier work]`; README pass `~30 min` |
+| Waves and completion | Added authored wave scheduling, progress UI, a completion state, and restart routing | `[TODO: add time]` |
+| Arena and death feedback | Added bounded arena walls and hero/enemy death presentation | `[TODO: add time]` |
+| Weapon loop | Added timed weighted weapon pickups, replacement, durability, usage UI, and pickup motion/color feedback | `[TODO: add time]` |
+| Extra feel and progression | Added hero-hit camera shake, wave-driven biome changes, a consumable directional dash, game-end feedback, and broken-weapon feedback | `[TODO: add time]` |
+| Final pass | Adjusted combat configuration, applied formatting, and simplified documentation navigation | `[TODO: add time]` |
 
 Time for later work is not fully recorded yet. I will add it by day before claiming a verified total against the eight-hour limit.
 
@@ -50,13 +55,14 @@ I treated agent output as a draft, not as final work.
 
 - I reused existing animations and assets instead of building a new content system.
 - Damage stays immediate. Animations explain accepted gameplay actions; they do not control damage timing.
-- Lethal enemies are removed immediately, so there is no delayed death animation.
+- Lethal enemies leave authoritative gameplay state immediately, while their presentation remains for the one-second death clip.
 - Bee spacing uses a simple two-pass pair solver. It works for the 20-enemy limit but does not scale to large swarms.
-- I chose a low-poly opaque disk over the transparent blob after profiling. The intended final setup disables realtime bee shadows, but `BeeNormal.prefab` currently still enables shadow casting on the bee renderer. `[TODO: confirm prefab shadow flag]`
+- I chose a low-poly opaque disk over the transparent blob after profiling. The final setup disables realtime bee shadow casting on `BeeNormal.prefab`.
 - Pooling was not the right optimization at the current 20-enemy scale: profiling pointed to GPU-bound rendering, not spawn or destruction lifecycle cost.
 - The boundary refactor deliberately centralized orchestration. Manual playthroughs were practical for this small project, but I would add unit tests for attack ordering, restart, and teardown as the project scales.
 - PR #20 also changed the configured bee speed from `10` to `1`. `[TODO: confirm intended gameplay tuning]`
-- Hero health is currently `10,000` from testing and needs final tuning.
+- Arena walls use simple hardcoded limits. Rigidbody/collider setup was not worthwhile for this small arena; a production game could use custom simple collision where profiling supports it.
+- PR #30 changed hero, enemy, and pickup-radius configuration values. Current values are source-verified, but their intended final tuning remains `[TODO: confirm]`.
 - With more time, I would add profiler screenshots, instanced disk rendering, and final balance values.
 
 ## Performance
@@ -89,6 +95,9 @@ I focused on making actions easy to read:
 - Red flashes and health bars make damage clear.
 - Bee spacing prevents enemies from looking like one stacked model.
 - Opaque low-poly disks keep bees visually connected to the ground without transparent blending.
+- Wave state makes the current batch, remaining enemies, and completed run visible.
+- Timed floor pickups visibly bob and rotate; collected weapons replace the held weapon and consume durability only on confirmed attacks.
+- Camera shake, dash trail/zoom, weapon-break animation, and win/loss overlays reinforce major combat and run-state changes.
 
 I kept immediate damage and the existing combat authority. Presentation reacts to gameplay events; it does not decide gameplay results.
 
@@ -99,6 +108,8 @@ I kept the existing gameplay/presentation separation, but I did perform a substa
 The refactor also made attack processing deterministic by enemy ID and made restart and teardown cleanup explicit. Gameplay was intended to remain unchanged. Because the project is small, I validated regressions through manual playthroughs; as it scales, I would add unit tests around attack ordering, restart, and cleanup rather than rely on manual coverage.
 
 I also added architecture guidance, a maintained codebase map, XML API comments, and generated documentation. PR #19 was documentation-only: it consolidated these decisions, measurements, AI workflow, and base-project feedback in this README.
+
+Later changes kept the same split: `WavesService` schedules authored enemy batches and observes entity lifecycle, while `EntitiesService` retains enemy creation and combat authority. `BiomesService` consumes wave state for presentation selection. The dash remains an authoritative entity action triggered from a secondary joystick input; weapon and camera views only react to typed events. PR #31 applied the repository formatting configuration, and PRs #21 and #32 made concise README and documentation-navigation updates.
 
 ## Base Project Feedback
 
@@ -113,7 +124,7 @@ I also added architecture guidance, a maintained codebase map, XML API comments,
 
 - Combat had little feedback, so hits and attack timing were hard to read.
 - Bees could overlap and look like one broken model.
-- Runtime content selection still uses the first weapon and enemy entry.
+- Content selection is configuration-driven, but a larger project would benefit from explicit progression and encounter-authoring tools.
 - Some recurring logs were expensive in large stress tests.
 
 ### Improvements for Scaling
@@ -146,5 +157,16 @@ I also added architecture guidance, a maintained codebase map, XML API comments,
 | #18 | `e9bc902a2f6174c3855fb639a24b05c088cd1f54` | Yes |
 | #19 | `e89498533d66b6038171b6554d3290ee5aa8d5c9` | Yes |
 | #20 | `182224ad1548e88fb0769cac8241293b9928ce8a` | Yes |
+| #21 | `d4ae21b509d4f73d93e64c607960339a00c2c5fc` | Yes |
+| #22 | `e7c516757f6faa63116ac791cc75c7daca397447` | Yes |
+| #23 | `ef3361e935d682db04999dfda0959379acc7e4a6` | Yes |
+| #24 | `0f1e84b46f18faee9b81a6c675da71f00991adea` | Yes |
+| #25 | `d7d3a7c4978d88ad889f846582aea0a431ccb3ac` | Yes |
+| #26 | `d26d7f664c567052f8c3caf45589a03c6e5ad83d` | Yes |
+| #27 | `4373d3bbc6cca4a508f379379ee676b35c2910ac` | Yes |
+| #28 | `6354f23f1d5ecf230b7bec0e27d9841434affabe` | Yes |
+| #29 | `3f1aaed0f9cd19a5c66fe693ef02d3cf1cdeeecc` | Yes |
+| #30 | `4ff5fa5e4c5121c42a37a33552c4964f204afc0c` | Yes |
+| #31 | `35379487d5625e23861dee89fc499bc4edcba16c` | Yes |
+| #32 | `b196d88fad56912ff3a65313723617679d8c0d3c` | Yes |
 <!-- pr-readme-evaluator:end -->
-Weapon pickups spawn around the hero on a timed cadence. Collected weapons replace the held weapon and consume one durability use per confirmed hit.
