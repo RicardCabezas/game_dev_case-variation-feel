@@ -48,6 +48,7 @@ MonoBehaviour views own transforms, Animator, UI, prefabs, and materials
 | `BiomesService` / `BiomeController` | Wave-indexed active biome presentation selection and restart state | `BiomeContainerView` through `IBiomePresentationSource` |
 | `AutoAttackIndicatorController` | Cooldown-indicator visibility and duration | Auto-attack indicator view |
 | `HealthBarsCanvasController` | Hero/enemy health-bar state, visibility, and timeout transitions | `HealthBarsCanvasView` |
+| `GameEndAnalyticsService` | Per-run accepted damage, confirmed weapon attacks, and committed dash counts observed from hero events; resets with hero restart | Game-end overlay |
 
 Controllers and UI controllers are plain C# and must not depend on sibling controllers, gameplay services, reader presentation sources, views, Animator, UI components, camera, audio, particles, or other Unity presentation objects. Services own source subscriptions; views retain publisher references and unsubscribe in `OnDestroy`.
 
@@ -65,7 +66,7 @@ Controllers and UI controllers are plain C# and must not depend on sibling contr
 8. Nonlethal enemy damage commits replacement state before `OnEnemyHit`. Lethal damage removes authoritative state, publishes self-sufficient hit payload, then removal. Enemy views may keep that removed identity visible for the one-second Bee death clip, but it no longer participates in gameplay or UI state.
 9. `WavesService.RestartGame()` resets wave state to wave zero before entities clear old enemies; `BiomesService` observes that snapshot and restores Dungeon. Entities then deactivate joystick, remove enemies normally, reset IDs and hero timing/state, and publish restart snapshot. Old removal events cannot advance restarted waves.
 
-No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, loot, or win-condition path exists in the inspected runtime source.
+No projectile, collider, raycast, hitbox, physical contact-point, score, reward, XP, or loot path exists in the inspected runtime source. A completed wave run is presented as a game win.
 
 ## Event contracts and presentation
 
@@ -81,14 +82,18 @@ No projectile, collider, raycast, hitbox, physical contact-point, score, reward,
 | `IEnemiesPresentationSource` events | Spawn, movement, self-sufficient hit, confirmed attack, authoritative removal | Enemy views and health-bar adapter |
 | `IWavesPresentationSource.OnStateChanged` | Complete `WaveState` replacement after wave start, accepted/rejected spawn, tracked removal, transition, completion, or restart | Wave-state UI view |
 | `WeaponsService.OnWeaponChanged` | Successful weapon selection; `WeaponConfig` | Hero view replaces weapon prefab |
+| `WeaponsService.OnEquippedWeaponDestroyed` | Confirmed attack depletes, or valid dash destroys, an armed weapon after state becomes unarmed | Broken-weapon animation view replays its UI clip |
 | `AutoAttackIndicatorController.OnStateChanged` | Complete indicator state replacement | Indicator view starts or hides fill |
 | `HealthBarsCanvasController.OnHealthBarAdded` | New hero state or first visible enemy state; `HealthBarState` | Health-bars canvas view creates or reuses bar |
 | `HealthBarsCanvasController.OnHealthBarChanged` | Health/fill/position/visibility replacement; `HealthBarState` | Health-bars canvas view updates bar |
 | `HealthBarsCanvasController.OnHealthBarRemoved` | Enemy removal; `HealthBarId` | Health-bars canvas view destroys bar |
+| `GameEndAnalyticsService` | Observes hero hit, confirmed attack, dash, and restart events; exposes current run totals | Game-end overlay reads totals when waves complete |
 
 `HeroView` and `EnemyView` each use an explicit `HitFlashView` component configured on their prefab. `WorldView` subscribes to hero hit events for `CameraShakeView`, and dash events for `CameraZoomView`. `HeroView` owns transform, rotation, hero Animator, instantiated weapon presentation, and prefab-assigned wide fading dash trail configured through serialized renderer values. It drives hero `Speed`, `Attack`, and persistent `Death` Boolean parameters; only normal joystick input drives `Speed` and rotation. Dash path comes from `OnDashPerformed`, while root position remains authoritative and instant. Restart clears `Death` and returns Animator to idle. `EnemyView` owns facing and Bee `IsMoving`, `Attack`, `Damage`, and `Death` presentation. Lethal damage plays Bee `Die`, stops facing updates, and `EnemiesContainerView` destroys that view after one-second clip; ordinary removal destroys immediately.
 
 `WeaponUsesIndicatorView` displays weapon-use state and selects the sword icon while armed, or the empty-hand icon while unarmed.
+`BrokenWeaponAnimationView` keeps `BrokenWeaponAnimationConainer` hidden except while replaying its authored legacy animation after equipped weapon durability reaches zero.
+`GameEndOverlayView` owns game-end presentation and restart request wiring. It shows `GAME OVER` on lethal hero damage and `GAME WON` with run statistics after all waves complete.
 
 ## Configuration and content selection
 
