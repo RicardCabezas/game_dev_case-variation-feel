@@ -437,9 +437,9 @@ found them by checking the assets directly.
 
 ### Could be better
 
+- It was very clear the project was completed and them trimmed for the test. That made some paths and assets be in weird locations (Remote vs Local)
 - Combat had almost no feedback, so hits and attack timing were hard to read.
 - Bees could overlap and look like one broken model.
-- Some recurring logs were expensive under stress.
 - Content selection is config driven, but a larger project would want explicit progression and
   encounter authoring tools.
 - Service discovery scans every loaded assembly by reflection and builds services with
@@ -448,12 +448,3 @@ found them by checking the assets directly.
   loops ends up decided by dictionary iteration order rather than anything declared.
 - Config is reachable as a static singleton from anywhere. Convenient, and the main reason gameplay
   code is not unit testable today.
-
-### Improvements for scaling
-
-- Replace pairwise bee separation with a uniform grid once enemy counts grow past roughly 150.
-- Add pooling only after profiling shows spawn or destroy cost at the target scale.
-- Replace reflection based service discovery with an explicit composition root, and inject config at
-  construction instead of reading it from statics.
-- Add a CI job that compiles the project and runs EditMode tests.
-- Add automated tests for attack timing, damage, death and restart.
