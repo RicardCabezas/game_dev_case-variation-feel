@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: CurvedSword
   m_EditorClassIdentifier: 
   id: curved_sword
-  damage: 15
-  range: 2
-  cooldown: 0.5
   displayName: Curved Sword
-  maxUses: 10
+  damage: 5
+  range: 2
+  cooldown: 0.2
+  maxUses: 20
   spawnChance: 0.5
   prefab: {fileID: -654538669453326304, guid: 4d0814cafad460246890ec829fa7071d, type: 3}
   pickupColor: {r: 0.2, g: 0.75, b: 0.35, a: 1}

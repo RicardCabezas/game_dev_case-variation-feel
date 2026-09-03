@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: LongSword
   m_EditorClassIdentifier: 
   id: long_sword
-  damage: 50
-  range: 5
-  cooldown: 2
   displayName: Long Sword
+  damage: 50
+  range: 4
+  cooldown: 2
   maxUses: 4
   spawnChance: 0.2
   prefab: {fileID: -3291902027411944700, guid: bac79aa2a0057e5429a664d3f336da3d, type: 3}
-  pickupColor: {r: 0.22, g: 0.46, b: 0.95, a: 1}
+  pickupColor: {r: 0.43421036, g: 0, b: 0.6226415, a: 1}

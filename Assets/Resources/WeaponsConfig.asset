@@ -18,6 +18,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: aa9aea758614647bda3455282360f9d6, type: 2}
   spawnInterval: 5
   minSpawnRadius: 3
-  maxSpawnRadius: 15
+  maxSpawnRadius: 10
   maxSpawnedWeapons: 10
   pickupPrefab: {fileID: 100000000000000005, guid: 7c5e8d0b3f8b42e3a4e7f75e2c7db8a1, type: 3}

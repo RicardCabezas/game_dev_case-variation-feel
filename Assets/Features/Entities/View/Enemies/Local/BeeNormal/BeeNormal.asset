@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: BeeNormal
   m_EditorClassIdentifier: 
   id: bee_normal
-  initialHealth: 50
-  speed: 1
+  initialHealth: 30
+  speed: 3
   attackCooldown: 3
   attackDamage: 10
   attackRange: 2
-  spawnRadius: 10
   prefab: {fileID: -4038593928516999298, guid: 41e04faa14fb7a34e8b16750ec910fc3, type: 3}
+  spawnRadius: 10

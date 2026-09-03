@@ -21,6 +21,11 @@ namespace Game.Weapons
         public IReadOnlyDictionary<int, SpawnedWeaponState> SpawnedWeapons => _spawned;
         public event Action<WeaponConfig> OnWeaponChanged;
         public event Action<EquippedWeaponState> OnWeaponStateChanged;
+        /// <summary>
+        /// Raised after an armed weapon is depleted by a confirmed attack or destroyed by a valid hero dash,
+        /// after its state becomes unarmed.
+        /// </summary>
+        public event Action OnEquippedWeaponDestroyed;
         public event Action<SpawnedWeaponState> OnWeaponSpawned;
         public event Action<int> OnWeaponRemoved;
 
@@ -108,6 +113,7 @@ namespace Game.Weapons
             if (consumed >= _state.MaxUses)
             {
                 Set(EquippedWeaponState.Unarmed, true);
+                OnEquippedWeaponDestroyed?.Invoke();
             }
             else
             {
@@ -117,12 +123,13 @@ namespace Game.Weapons
             return true;
         }
 
-        /// <summary>Consumes equipped weapon immediately after a valid dash.</summary>
+        /// <summary>Destroys equipped weapon immediately after a valid dash.</summary>
         public void DestroyEquippedWeapon()
         {
             if (_state.IsArmed)
             {
                 Set(EquippedWeaponState.Unarmed, true);
+                OnEquippedWeaponDestroyed?.Invoke();
             }
         }
 
