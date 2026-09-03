@@ -38,7 +38,7 @@ namespace Game.Weapons
         private void Update()
         {
             transform.Rotate(Vector3.up, rotationDegreesPerSecond * Time.deltaTime, Space.World);
-            float offsetY = Mathf.Sin(Time.time * levitationFrequency * Mathf.PI * 2f) * levitationAmplitude;
+            var offsetY = Mathf.Sin(Time.time * levitationFrequency * Mathf.PI * 2f) * levitationAmplitude;
             transform.position = _basePosition + Vector3.up * offsetY;
         }
 

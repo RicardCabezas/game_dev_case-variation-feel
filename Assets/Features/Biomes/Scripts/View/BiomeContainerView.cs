@@ -24,16 +24,30 @@ namespace Game.Biomes
 
         private void OnBiomeChanged(BiomeState state)
         {
-            if (state == null || state.Prefab == null) return;
-            if (_currentBiome != null) Destroy(_currentBiome);
+            if (state == null || state.Prefab == null)
+            {
+                return;
+            }
+
+            if (_currentBiome != null)
+            {
+                Destroy(_currentBiome);
+            }
+
             _currentBiome = Instantiate(state.Prefab, transform);
-            if (state.Skybox != null) RenderSettings.skybox = state.Skybox;
+            if (state.Skybox != null)
+            {
+                RenderSettings.skybox = state.Skybox;
+            }
         }
 
         private void OnDestroy()
         {
             ServicesLocator.Instance.OnAllServicesInitialized -= OnServicesInitialized;
-            if (_biomes?.Presentation != null) _biomes.Presentation.OnStateChanged -= OnBiomeChanged;
+            if (_biomes?.Presentation != null)
+            {
+                _biomes.Presentation.OnStateChanged -= OnBiomeChanged;
+            }
         }
     }
 }

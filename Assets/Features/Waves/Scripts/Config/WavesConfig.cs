@@ -29,7 +29,7 @@ namespace Game.Waves
         {
             get
             {
-                int maximum = 0;
+                var maximum = 0;
 
                 if (waves == null)
                 {

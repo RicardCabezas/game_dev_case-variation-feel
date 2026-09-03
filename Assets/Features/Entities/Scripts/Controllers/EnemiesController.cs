@@ -217,16 +217,16 @@ namespace Game.GamePlay.Enemies
         public IReadOnlyList<int> CollectDashHitEnemyIds(HeroDashRequest dash, float hitRadius)
         {
             _dashHits.Clear();
-            float radiusSqr = Mathf.Max(0f, hitRadius) * Mathf.Max(0f, hitRadius);
+            var radiusSqr = Mathf.Max(0f, hitRadius) * Mathf.Max(0f, hitRadius);
             Vector2 start = new Vector2(dash.StartPosition.x, dash.StartPosition.z);
             Vector2 end = new Vector2(dash.EndPosition.x, dash.EndPosition.z);
             Vector2 segment = end - start;
-            float segmentLengthSqr = segment.sqrMagnitude;
+            var segmentLengthSqr = segment.sqrMagnitude;
 
             foreach (var pair in _enemies)
             {
                 Vector2 point = new Vector2(pair.Value.Position.x, pair.Value.Position.z);
-                float interpolation = segmentLengthSqr > 0f
+                var interpolation = segmentLengthSqr > 0f
                     ? Mathf.Clamp01(Vector2.Dot(point - start, segment) / segmentLengthSqr)
                     : 0f;
                 Vector2 closest = start + segment * interpolation;

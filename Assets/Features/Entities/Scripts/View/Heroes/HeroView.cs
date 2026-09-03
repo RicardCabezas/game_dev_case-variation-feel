@@ -213,7 +213,7 @@ namespace Game.GamePlay.Heroes
                 return;
             }
 
-            float speed = _currentMovementInput.magnitude;
+            var speed = _currentMovementInput.magnitude;
             animator.SetFloat(SpeedHash, speed);
         }
 

@@ -43,7 +43,7 @@ namespace Game.UI
                 canvasRect = (RectTransform)transform;
             }
 
-            int capacity = Mathf.Max(1, WavesConfig.Instance.MaximumConcurrentEnemies + 1);
+            var capacity = Mathf.Max(1, WavesConfig.Instance.MaximumConcurrentEnemies + 1);
             _views = new Dictionary<HealthBarId, HealthBarView>(capacity);
             _controller.OnHealthBarAdded += OnHealthBarAdded;
             _controller.OnHealthBarChanged += OnHealthBarChanged;

@@ -44,7 +44,7 @@ namespace Game.GamePlay.Entities
             _materialPropertyBlock.Clear();
             _materialPropertyBlock.SetColor(BaseColorHash, hitFlashColor);
 
-            for (int i = 0; i < renderers.Length; i++)
+            for (var i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
 
@@ -65,7 +65,7 @@ namespace Game.GamePlay.Entities
                 return;
             }
 
-            for (int i = 0; i < renderers.Length; i++)
+            for (var i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
 

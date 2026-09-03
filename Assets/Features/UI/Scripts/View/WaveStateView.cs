@@ -38,7 +38,7 @@ namespace Game.UI
                 return;
             }
 
-            string phase = state.Phase == WavePhase.Spawning ? "Spawning" : "Clear enemies";
+            var phase = state.Phase == WavePhase.Spawning ? "Spawning" : "Clear enemies";
             stateText.text =
                 $"Wave {state.CurrentWaveIndex + 1}/{state.TotalWaves}\n{phase} · "
                 + $"{state.PendingSpawns} pending · {state.ActiveEnemies} active";

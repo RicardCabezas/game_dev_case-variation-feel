@@ -10,7 +10,7 @@ namespace Game.UI
 
         public void Apply(EquippedWeaponState state)
         {
-            string label = state.IsArmed ? state.Weapon.DisplayName : "Unarmed";
+            var label = state.IsArmed ? state.Weapon.DisplayName : "Unarmed";
             CurrentState = new WeaponUsesIndicatorState(
                 $"{label} — {state.RemainingUses} / {state.MaxUses}",
                 state.RemainingUses,

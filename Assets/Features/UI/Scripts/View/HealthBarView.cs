@@ -83,7 +83,7 @@ namespace Game.UI
             Vector3 viewportPosition = _worldCamera.WorldToViewportPoint(
                 _worldPosition + _worldOffset
             );
-            bool isOnScreen =
+            var isOnScreen =
                 viewportPosition.z > 0f
                 && viewportPosition.x >= 0f
                 && viewportPosition.x <= 1f
