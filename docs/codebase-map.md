@@ -4,7 +4,7 @@
 
 ## Runtime model
 
-The project is a Unity 2022.3 arena game. Touch or mouse input controls virtual joystick. Normal active input moves hero; second press inside configured double-tap window opens dash-aiming joystick. Valid dash release consumes equipped weapon, moves hero instantly along bounded path, and damages enemies intersecting its capsule. After normal input becomes inactive, hero automatically attacks nearest tracked enemy inside equipped weapon range.
+The project is a Unity 2022.3 arena game. Touch or mouse input controls virtual joystick. Normal active input moves hero; second press inside configured double-tap window opens dash-aiming joystick. Valid dash release consumes equipped weapon, moves hero instantly along bounded path, and damages enemies intersecting its capsule. After normal input becomes inactive, hero automatically attacks nearest tracked enemy strictly inside equipped weapon range; equal-distance targets use lower runtime ID.
 
 ```text
 ServicesLocator (persistent scene component)
