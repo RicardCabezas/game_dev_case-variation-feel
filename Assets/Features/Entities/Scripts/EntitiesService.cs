@@ -91,7 +91,7 @@ namespace Game.GamePlay.Entities
             }
 
             Vector3 position = _hero.CurrentState.Position;
-            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            var angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
             position += new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * config.SpawnRadius;
             position.x = Mathf.Clamp(
                 position.x,
@@ -142,14 +142,14 @@ namespace Game.GamePlay.Entities
 
             while (!token.IsCancellationRequested)
             {
-                float time = Time.time;
+                var time = Time.time;
                 _hero.Tick(
                     _joystick.CurrentState,
                     _weapons.CurrentWeapon,
                     time,
                     Time.deltaTime
                 );
-                bool dashCommitted = TryResolvePendingDash();
+                var dashCommitted = TryResolvePendingDash();
                 _weapons.Tick(time, _hero.CurrentState.Position, !_hero.CurrentState.IsDead);
 
                 if (!dashCommitted && _hero.TryCreateAttackRequest(

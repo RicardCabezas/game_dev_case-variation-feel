@@ -127,10 +127,10 @@ namespace Game.Waves
 
         private void StartWaveAtOrAfter(int startIndex, float currentTime)
         {
-            for (int index = startIndex; index < _waves.Count; index++)
+            for (var index = startIndex; index < _waves.Count; index++)
             {
                 WaveDefinition wave = _waves[index];
-                int pending = CountValidSpawns(wave);
+                var pending = CountValidSpawns(wave);
 
                 if (pending == 0)
                 {

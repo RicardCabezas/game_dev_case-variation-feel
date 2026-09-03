@@ -35,7 +35,7 @@ namespace Game.Weapons
             _nextId = 0;
             _nextSpawn = Time.time;
             _state = EquippedWeaponState.Unarmed;
-            
+
             return UniTask.FromResult(true);
         }
 
@@ -52,26 +52,40 @@ namespace Game.Weapons
         public void Tick(float time, Vector3 center, bool alive)
         {
             if (!alive || time < _nextSpawn)
+            {
                 return;
+            }
+
             WeaponsConfig config = WeaponsConfig.Instance;
             _nextSpawn = time + config.SpawnInterval;
             if (_spawned.Count >= config.MaxSpawnedWeapons)
+            {
                 return;
+            }
+
             IReadOnlyList<WeaponConfig> list = config.Weapons;
-            float total = 0f;
+            var total = 0f;
             foreach (WeaponConfig weapon in list)
             {
                 if (weapon != null && weapon.MaxUses > 0 && weapon.SpawnChance > 0f)
+                {
                     total += weapon.SpawnChance;
+                }
             }
             if (total <= 0f)
+            {
                 return;
-            float roll = UnityEngine.Random.value * total;
+            }
+
+            var roll = UnityEngine.Random.value * total;
             WeaponConfig chosen = null;
             foreach (WeaponConfig weapon in list)
             {
                 if (weapon == null || weapon.MaxUses <= 0 || weapon.SpawnChance <= 0f)
+                {
                     continue;
+                }
+
                 roll -= weapon.SpawnChance;
                 if (roll <= 0f)
                 {
@@ -80,11 +94,14 @@ namespace Game.Weapons
                 }
             }
             if (chosen == null)
+            {
                 return;
-            float min = config.MinSpawnRadius;
-            float max = config.MaxSpawnRadius;
-            float radius = Mathf.Sqrt(Mathf.Lerp(min * min, max * max, UnityEngine.Random.value));
-            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            }
+
+            var min = config.MinSpawnRadius;
+            var max = config.MaxSpawnRadius;
+            var radius = Mathf.Sqrt(Mathf.Lerp(min * min, max * max, UnityEngine.Random.value));
+            var angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
             Vector3 position = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
             position.x = Mathf.Clamp(position.x, -Constants.World.ArenaLimit, Constants.World.ArenaLimit);
             position.z = Mathf.Clamp(position.z, -Constants.World.ArenaLimit, Constants.World.ArenaLimit);
@@ -100,7 +117,10 @@ namespace Game.Weapons
         public bool TryPickup(int id)
         {
             if (!_spawned.Remove(id, out SpawnedWeaponState pickup))
+            {
                 return false;
+            }
+
             OnWeaponRemoved?.Invoke(id);
             Equip(pickup.Weapon);
             return true;
@@ -108,8 +128,11 @@ namespace Game.Weapons
         public bool RegisterConfirmedAttack()
         {
             if (!_state.IsArmed)
+            {
                 return false;
-            int consumed = _state.ConsumedUses + 1;
+            }
+
+            var consumed = _state.ConsumedUses + 1;
             if (consumed >= _state.MaxUses)
             {
                 Set(EquippedWeaponState.Unarmed, true);
@@ -153,7 +176,10 @@ namespace Game.Weapons
         {
             _state = state;
             if (changed)
+            {
                 OnWeaponChanged?.Invoke(CurrentWeapon);
+            }
+
             OnWeaponStateChanged?.Invoke(_state);
         }
 
@@ -161,8 +187,10 @@ namespace Game.Weapons
         {
             List<int> ids = new List<int>(_spawned.Keys);
             _spawned.Clear();
-            foreach (int id in ids)
+            foreach (var id in ids)
+            {
                 OnWeaponRemoved?.Invoke(id);
+            }
         }
     }
 }

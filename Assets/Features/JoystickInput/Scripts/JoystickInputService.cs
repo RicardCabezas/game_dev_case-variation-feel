@@ -61,10 +61,10 @@ namespace Game.JoystickInput
 
         private void HandleInput()
         {
-            bool hasInput = false;
+            var hasInput = false;
             Vector2 inputPosition = Vector2.zero;
-            bool isPressed = false;
-            bool isReleased = false;
+            var isPressed = false;
+            var isReleased = false;
 
             if (Input.touchCount > 0)
             {
@@ -88,7 +88,7 @@ namespace Game.JoystickInput
 
             if (isPressed)
             {
-                bool secondaryInput = Time.time - _lastNormalReleaseTime
+                var secondaryInput = Time.time - _lastNormalReleaseTime
                     <= JoystickInputConfig.Instance.SecondTapWindow;
                 _lastNormalReleaseTime = float.NegativeInfinity;
                 _normalPressTime = secondaryInput ? float.NegativeInfinity : Time.time;
@@ -135,7 +135,7 @@ namespace Game.JoystickInput
 
         private Vector2 GetMovementVector(Vector2 inputPosition)
         {
-            float maxRadius = JoystickInputConfig.Instance.MaxRadius;
+            var maxRadius = JoystickInputConfig.Instance.MaxRadius;
             if (maxRadius <= 0f)
             {
                 return Vector2.zero;

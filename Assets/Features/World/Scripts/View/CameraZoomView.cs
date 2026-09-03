@@ -53,8 +53,8 @@ namespace Game.World
                 return;
             }
 
-            float duration = Mathf.Max(.01f, zoomDuration);
-            float progress = (Time.time - _zoomStartTime) / duration;
+            var duration = Mathf.Max(.01f, zoomDuration);
+            var progress = (Time.time - _zoomStartTime) / duration;
 
             if (progress >= 1f)
             {
@@ -63,7 +63,7 @@ namespace Game.World
                 return;
             }
 
-            float pulse = Mathf.Sin(progress * Mathf.PI);
+            var pulse = Mathf.Sin(progress * Mathf.PI);
             SetFieldOfView(_baseFieldOfView + zoomInFieldOfViewOffset * pulse);
         }
 

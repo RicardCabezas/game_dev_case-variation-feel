@@ -113,7 +113,7 @@ namespace Game.UI
                 hit.Position,
                 true
             );
-            bool add = !_states.ContainsKey(id);
+            var add = !_states.ContainsKey(id);
             _states[id] = state;
             _hideTimes[hit.EnemyId] = time + _duration;
 

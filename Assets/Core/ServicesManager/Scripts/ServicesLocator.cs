@@ -213,7 +213,7 @@ namespace Core.ServicesManager
         private async UniTaskVoid ResetServices()
         {
 
-            for (int i = _orderedServices.Count - 1; i >= 0; i--)
+            for (var i = _orderedServices.Count - 1; i >= 0; i--)
             {
                 try
                 {
