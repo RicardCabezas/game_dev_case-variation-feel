@@ -15,8 +15,7 @@ INPUT                  = Assets/Core/ScriptableObjectSingleton/Scripts \
                          Assets/Features/Weapons/Scripts \
                          Assets/Features/World/Scripts \
                          docs/index.md \
-                         docs/codebase-map.md \
-                         docs/analysis
+                         docs/codebase-map.md
 RECURSIVE              = YES
 FILE_PATTERNS          = *.cs *.md
 EXCLUDE_PATTERNS       = */Library/* */Packages/* */obj/* */bin/* */Assets/Plugins/* */Assets/AssetStoreTools* */documentation-build/*

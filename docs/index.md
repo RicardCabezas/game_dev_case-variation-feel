@@ -6,8 +6,7 @@ This Unity 2022.3 project is a small arena game: touch or mouse input drives a v
 
 ## Start here
 
-- [Current codebase map](codebase-map.md) — maintained verified static source map, runtime flow, ownership, and event contracts.
-- [Initial assessment archive](analysis/initial_assessment/01-codebase-map.md) — original codebase map, performance audit, architecture guideline, opportunities, and prioritization; historical only.
+- [Codebase map](codebase-map.md) — verified runtime flow, ownership boundaries, and event contracts.
 - [API reference](annotated.html) — generated public C# API, source links, search, and Graphviz relationship diagrams.
 
 ## Gameplay and service flow
@@ -18,5 +17,5 @@ While joystick input is active, `HeroController` moves. When input becomes inact
 
 ## Evidence status
 
-Source code is authoritative for current static behavior and public contracts. The current codebase map records verified source facts. Initial-assessment pages are preserved historical analysis; performance numbers are capture-specific measurements, and proposals are not evidence that behavior exists.
+Source code is authoritative for behavior and public contracts. The codebase map records verified source facts.
 Weapons runtime owns timed floor pickups, weighted selection, replacement, and durability exhaustion; UI observes immutable weapon-use state.
