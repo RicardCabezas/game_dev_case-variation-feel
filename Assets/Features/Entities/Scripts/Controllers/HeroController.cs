@@ -118,7 +118,7 @@ namespace Game.GamePlay.Heroes
 
         /// <summary>
         /// Creates an attack request when hero is idle, alive, off cooldown, and has a target in
-        /// range.
+        /// range. Chooses the nearest target; equal-distance targets use the lower runtime ID.
         /// </summary>
         public bool TryCreateAttackRequest(
             WeaponConfig weapon,
@@ -134,23 +134,47 @@ namespace Game.GamePlay.Heroes
                 return false;
             }
 
+            var rangeSqr = weapon.Range * weapon.Range;
+            var bestDistanceSqr = rangeSqr;
+            var bestTargetId = int.MaxValue;
+            var bestTargetPosition = default(Vector3);
+            var hasTarget = false;
+
             foreach (var pair in enemies)
             {
                 var enemy = pair.Value;
+                var distanceSqr = (enemy.Position - _currentState.Position).sqrMagnitude;
 
-                if (Vector3.Distance(_currentState.Position, enemy.Position) < weapon.Range)
+                if (distanceSqr >= rangeSqr)
                 {
-                    request = new HeroAttackRequest(
-                        enemy.Id,
-                        enemy.Position,
-                        weapon.Damage,
-                        weapon.Cooldown
-                    );
-                    return true;
+                    continue;
+                }
+
+                if (
+                    !hasTarget
+                    || distanceSqr < bestDistanceSqr
+                    || (distanceSqr == bestDistanceSqr && enemy.Id < bestTargetId)
+                )
+                {
+                    bestDistanceSqr = distanceSqr;
+                    bestTargetId = enemy.Id;
+                    bestTargetPosition = enemy.Position;
+                    hasTarget = true;
                 }
             }
 
-            return false;
+            if (!hasTarget)
+            {
+                return false;
+            }
+
+            request = new HeroAttackRequest(
+                bestTargetId,
+                bestTargetPosition,
+                weapon.Damage,
+                weapon.Cooldown
+            );
+            return true;
         }
 
         /// <summary>Commits confirmed attack and starts its cooldown.</summary>
