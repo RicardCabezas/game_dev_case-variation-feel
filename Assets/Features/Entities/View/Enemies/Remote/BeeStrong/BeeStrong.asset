@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: bee_strong
   initialHealth: 100
-  speed: 7
+  speed: 2
   attackCooldown: 4
-  attackDamage: 20
-  attackRange: 2.5
-  spawnRadius: 10
+  attackDamage: 50
+  attackRange: 1
   prefab: {fileID: 3790887112881915835, guid: ca1a34fa598404dffb62f942ff786abb, type: 3}
+  spawnRadius: 10

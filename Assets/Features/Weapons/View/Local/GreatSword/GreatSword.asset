@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: GreatSword
   m_EditorClassIdentifier: 
   id: great_sword
-  damage: 30
-  range: 3
-  cooldown: 1.5
   displayName: Great Sword
-  maxUses: 6
-  spawnChance: 0.3
+  damage: 20
+  range: 3
+  cooldown: 1
+  maxUses: 3
+  spawnChance: 0.2
   prefab: {fileID: 7602662686883965424, guid: 17cf6e9fc28f3a544bc062d510f66f4a, type: 3}
-  pickupColor: {r: 0.85, g: 0.24, b: 0.2, a: 1}
+  pickupColor: {r: 0, g: 0.60461754, b: 0.7735849, a: 1}
